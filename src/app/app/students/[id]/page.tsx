@@ -7,6 +7,7 @@ import { canAccessStudent, isInternalRole } from "@/lib/scope";
 import { studentMetrics } from "@/lib/metrics";
 import { StatusBadge } from "@/components/ui";
 import { GoalForm, NoteBox } from "@/components/student-controls";
+import { AssignTasksPanel, TasksTable, SkillsPanel, type TaskDTO } from "@/components/task-controls";
 
 export const dynamic = "force-dynamic";
 
@@ -66,6 +67,26 @@ export default async function StudentProfile({
 
   const m = await studentMetrics(id);
   const activeEnrollment = student.enrollments.find((e) => e.status === "ACTIVE");
+
+  const canEditAcademicsEarly = can(user.role, "academics.edit");
+  const [templates, skillRows] = await Promise.all([
+    canEditAcademicsEarly
+      ? db.taskTemplate.findMany({ orderBy: [{ courseType: "asc" }, { defaultOrder: "asc" }] })
+      : Promise.resolve([]),
+    db.studentSkillStatus.findMany({ where: { studentId: id }, orderBy: { skill: "asc" } }),
+  ]);
+
+  const taskDTOs: TaskDTO[] = student.tasks.map((t) => ({
+    id: t.id, title: t.title, category: t.category, status: t.status,
+    teacherApproved: t.teacherApproved, score: t.score, scoreMax: t.scoreMax,
+    comment: t.comment ?? "", mistakeReviewDone: t.mistakeReviewDone,
+    deadline: t.deadline?.toLocaleDateString("en-GB") ?? "",
+    deadlineISO: t.deadline?.toISOString().slice(0, 10) ?? "",
+  }));
+  const taskMode = canEditAcademicsEarly ? "editor" as const
+    : user.role === "STUDENT" ? "student" as const
+    : "readonly" as const;
+  const defaultCourseType = activeEnrollment?.course.type ?? "SAT";
 
   // internal notes: visibility rules (manager sees all; staff: STAFF+TEACHER; teacher: TEACHER)
   const notes = internal
@@ -180,34 +201,22 @@ export default async function StudentProfile({
         )}
 
         {tab === "tasks" && (
-          <div className="overflow-x-auto rounded-xl border border-black/10 bg-white">
-            <table className="w-full min-w-160 text-sm">
-              <thead className="bg-paper text-left">
-                <tr>
-                  <th className="px-4 py-2.5 font-semibold">Task</th>
-                  <th className="px-4 py-2.5 font-semibold">Category</th>
-                  <th className="px-4 py-2.5 font-semibold">Deadline</th>
-                  <th className="px-4 py-2.5 font-semibold">Status</th>
-                  <th className="px-4 py-2.5 font-semibold">Score</th>
-                  <th className="px-4 py-2.5 font-semibold">Comment</th>
-                </tr>
-              </thead>
-              <tbody>
-                {student.tasks.map((t) => (
-                  <tr key={t.id} className="border-t border-black/5">
-                    <td className="px-4 py-2.5 font-medium">{t.title}{t.mistakeReviewDone && <span className="ml-1 text-xs text-ok" title="Mistake review done">✓rev</span>}</td>
-                    <td className="px-4 py-2.5 text-ink/60">{t.category.replaceAll("_", " ").toLowerCase()}</td>
-                    <td className="px-4 py-2.5">{t.deadline?.toLocaleDateString("en-GB") ?? "—"}</td>
-                    <td className="px-4 py-2.5">
-                      <StatusBadge value={t.status} tone={t.status === "COMPLETED" ? "ok" : t.status === "MISSING" || t.status === "LATE" ? "risk" : t.status === "IN_PROGRESS" || t.status === "SUBMITTED" ? "warn" : "muted"} />
-                    </td>
-                    <td className="px-4 py-2.5 font-semibold">{t.score != null ? `${t.score}/${t.scoreMax}` : "—"}</td>
-                    <td className="max-w-60 px-4 py-2.5 text-ink/60">{t.comment ?? "—"}</td>
-                  </tr>
-                ))}
-                {!student.tasks.length && <tr><td colSpan={6} className="px-4 py-10 text-center text-ink/40">No tasks assigned yet.</td></tr>}
-              </tbody>
-            </table>
+          <div className="space-y-4">
+            {canEditAcademics && (
+              <AssignTasksPanel
+                studentId={id}
+                templates={templates.map((t) => ({ id: t.id, title: t.title, category: t.category, courseType: t.courseType }))}
+                assignedTemplateIds={student.tasks.map((t) => t.templateId).filter(Boolean) as string[]}
+                defaultCourseType={defaultCourseType}
+              />
+            )}
+            <TasksTable tasks={taskDTOs} mode={taskMode} />
+            <SkillsPanel
+              studentId={id}
+              courseType={defaultCourseType}
+              skills={skillRows.map((r) => ({ skill: r.skill, status: r.status }))}
+              editable={canEditAcademics}
+            />
           </div>
         )}
 

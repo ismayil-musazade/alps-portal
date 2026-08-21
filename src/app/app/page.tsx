@@ -208,6 +208,7 @@ async function StudentSummary({ studentId, heading }: { studentId: string; headi
       </div>
 
       <Section title="Next tasks">
+        <p className="mb-2 -mt-1 text-sm"><a className="font-semibold text-brand hover:underline" href={`/app/students/${studentId}?tab=tasks`}>Open all tasks →</a></p>
         <ul className="divide-y divide-black/5 rounded-xl border border-black/10 bg-white">
           {nextTasks.map((t) => (
             <li key={t.id} className="flex items-center justify-between px-4 py-3 text-sm">
