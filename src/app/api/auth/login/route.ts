@@ -58,7 +58,8 @@ export async function POST(req: NextRequest) {
   session.userId = user.id;
   session.role = user.role;
   session.name = user.name;
+  session.mustChangePassword = user.mustChangePassword;
   await session.save();
 
-  return NextResponse.json({ ok: true, role: user.role });
+  return NextResponse.json({ ok: true, role: user.role, mustChangePassword: user.mustChangePassword });
 }

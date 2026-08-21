@@ -75,6 +75,9 @@ export function AppNav({ role, name }: { role: Role; name: string }) {
           <span className="hidden text-sm text-ink/60 sm:inline">
             {name} · <span className="font-semibold">{role.toLowerCase()}</span>
           </span>
+          <Link href="/app/change-password" className="hidden text-xs font-semibold text-ink/50 hover:text-brand sm:inline">
+            password
+          </Link>
           <button
             onClick={logout}
             className="rounded-full border border-black/15 px-3 py-1 text-sm font-medium hover:bg-black/5"

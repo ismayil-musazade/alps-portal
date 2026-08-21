@@ -11,12 +11,17 @@ export async function middleware(req: NextRequest) {
   const res = NextResponse.next();
   const session = await getIronSession<SessionData>(req, res, sessionOptions);
 
-  const isApp = req.nextUrl.pathname.startsWith("/app");
-  const isLogin = req.nextUrl.pathname === "/login";
+  const path = req.nextUrl.pathname;
+  const isApp = path.startsWith("/app");
+  const isLogin = path === "/login";
+  const isChangePw = path === "/app/change-password";
 
   if (isApp && !session.userId) {
-    const url = new URL("/login", req.url);
-    return NextResponse.redirect(url);
+    return NextResponse.redirect(new URL("/login", req.url));
+  }
+  // temporary-password accounts are confined to the change-password screen
+  if (isApp && session.userId && session.mustChangePassword && !isChangePw) {
+    return NextResponse.redirect(new URL("/app/change-password", req.url));
   }
   if (isLogin && session.userId) {
     return NextResponse.redirect(new URL("/app", req.url));

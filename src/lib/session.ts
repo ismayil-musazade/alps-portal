@@ -6,6 +6,7 @@ export interface SessionData {
   userId?: string;
   role?: Role;
   name?: string;
+  mustChangePassword?: boolean;
 }
 
 export const sessionOptions: SessionOptions = {
