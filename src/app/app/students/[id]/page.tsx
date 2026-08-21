@@ -8,6 +8,7 @@ import { studentMetrics } from "@/lib/metrics";
 import { StatusBadge } from "@/components/ui";
 import { GoalForm, NoteBox } from "@/components/student-controls";
 import { AssignTasksPanel, TasksTable, SkillsPanel, type TaskDTO } from "@/components/task-controls";
+import { ExamForm, DeleteExamButton } from "@/components/exam-controls";
 
 export const dynamic = "force-dynamic";
 
@@ -222,6 +223,7 @@ export default async function StudentProfile({
 
         {tab === "exams" && (
           <div className="space-y-3">
+            {canEditAcademics && <ExamForm studentId={id} defaultCourseType={defaultCourseType} />}
             {student.exams.map((e) => (
               <Card key={e.id}>
                 <div className="flex flex-wrap items-center gap-3">
@@ -229,6 +231,7 @@ export default async function StudentProfile({
                   <span className="font-bold">{e.courseType.replaceAll("_", " ")}</span>
                   <span className="text-sm text-ink/50">{e.examDate.toLocaleDateString("en-GB")}</span>
                   <span className="ml-auto text-xl font-extrabold text-brand">{e.totalScore}</span>
+                  {canEditAcademics && <DeleteExamButton examId={e.id} />}
                 </div>
                 {e.sectionScores && (
                   <div className="mt-2 flex flex-wrap gap-2">

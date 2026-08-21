@@ -11,6 +11,7 @@ const NAV: Record<Role, { href: string; label: string }[]> = {
     { href: "/app/leads", label: "CRM / Leads" },
     { href: "/app/students", label: "Students" },
     { href: "/app/groups", label: "Courses & Groups" },
+    { href: "/app/attendance", label: "Attendance" },
     { href: "/app/users", label: "Users" },
   ],
   STAFF: [
@@ -21,6 +22,7 @@ const NAV: Record<Role, { href: string; label: string }[]> = {
   TEACHER: [
     { href: "/app", label: "Dashboard" },
     { href: "/app/students", label: "My Students" },
+    { href: "/app/attendance", label: "Attendance" },
   ],
   STUDENT: [
     { href: "/app", label: "My Progress" },
