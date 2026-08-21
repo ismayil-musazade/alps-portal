@@ -5,6 +5,7 @@ import { currentUser } from "@/lib/session";
 import { can } from "@/lib/permissions";
 import { StatusBadge, LEAD_STATUS_TONE } from "@/components/ui";
 import { LeadControls, ActivityBox } from "@/components/lead-controls";
+import { ConvertButton } from "@/components/student-controls";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +42,8 @@ export default async function LeadDetail({ params }: { params: Promise<{ id: str
         <h1 className="text-2xl font-extrabold">{lead.fullName}</h1>
         <StatusBadge value={lead.status} tone={LEAD_STATUS_TONE[lead.status]} />
         {canEdit && (
-          <div className="ml-auto flex gap-2">
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+            {can(user.role, "students.edit") && lead.status !== "LOST" && <ConvertButton leadId={lead.id} />}
             <Link href={`/app/leads/${lead.id}/edit`} className="rounded-full border border-black/15 px-4 py-1.5 text-sm font-semibold hover:bg-black/5">
               Edit details
             </Link>
