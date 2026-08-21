@@ -9,6 +9,7 @@ import { StatusBadge } from "@/components/ui";
 import { GoalForm, NoteBox } from "@/components/student-controls";
 import { AssignTasksPanel, TasksTable, SkillsPanel, type TaskDTO } from "@/components/task-controls";
 import { ExamForm, DeleteExamButton } from "@/components/exam-controls";
+import { NewReportCardForm, ReportCardEditor } from "@/components/report-card-controls";
 
 export const dynamic = "force-dynamic";
 
@@ -105,6 +106,7 @@ export default async function StudentProfile({
 
   const canEditAcademics = can(user.role, "academics.edit");
   const canEditStudent = can(user.role, "students.edit");
+  const canEditReports = can(user.role, "reports.edit");
 
   return (
     <>
@@ -281,21 +283,67 @@ export default async function StudentProfile({
 
         {tab === "report" && (
           <div className="space-y-4">
-            {student.reportCards.map((r) => (
-              <Card key={r.id} title={`Period ${r.period}${r.publishedAt ? "" : " · DRAFT (not visible to student/parent)"}`}>
-                {r.metrics && (
-                  <div className="mb-3 flex flex-wrap gap-2">
-                    {Object.entries(r.metrics as Record<string, string | number>).map(([k, v]) => (
-                      <span key={k} className="rounded-lg bg-paper px-2.5 py-1 text-xs font-semibold">{k}: {String(v)}</span>
-                    ))}
+            {canEditReports && (
+              <NewReportCardForm studentId={id} suggestedPeriod={new Date().toISOString().slice(0, 7)} />
+            )}
+            {student.reportCards.map((r) => {
+              const met = (r.metrics ?? {}) as Record<string, string | number | null>;
+              return (
+                <div key={r.id} className="rounded-xl border border-black/10 bg-white p-5">
+                  <div className="flex flex-wrap items-center gap-3 border-b border-black/5 pb-3">
+                    <h3 className="text-lg font-extrabold">Report card · {r.period}</h3>
+                    {r.publishedAt ? (
+                      <StatusBadge value={`published ${r.publishedAt.toLocaleDateString("en-GB")}`} tone="ok" />
+                    ) : (
+                      <StatusBadge value="draft — not visible to student/parent" tone="warn" />
+                    )}
                   </div>
-                )}
-                <Row label="Strengths" value={r.strengths} />
-                <Row label="Weaknesses" value={r.weaknesses} />
-                <Row label="Next target" value={r.nextTarget} />
-                {r.teacherComment && <p className="mt-2 border-t border-black/5 pt-2 text-sm text-ink/70">{r.teacherComment}</p>}
-              </Card>
-            ))}
+
+                  <div className="mt-3 grid gap-x-6 gap-y-1 md:grid-cols-2">
+                    <Row label="Student" value={student.fullName} />
+                    <Row label="Course" value={activeEnrollment?.course.name} />
+                    <Row label="Teacher" value={activeEnrollment?.teacher?.name} />
+                    <Row label="Start date" value={student.startDate?.toLocaleDateString("en-GB")} />
+                    <Row label="Target" value={met.target ? String(met.target) : "—"} />
+                    <Row label="Starting point (placement)" value={met.placement ? String(met.placement) : "—"} />
+                    <Row label="Current level (latest exam)" value={met.latestExam ? String(met.latestExam) : "—"} />
+                    <Row label="Attendance" value={met.attendancePct != null ? `${met.attendancePct}%  (${met.absences ?? 0} absence(s))` : "—"} />
+                    <Row label="Tasks completed" value={met.taskCompletionPct != null ? `${met.taskCompletionPct}%  (${met.tasksApproved ?? 0}/${met.tasksAssigned ?? 0})` : "—"} />
+                    <Row label="Average task quality" value={met.avgQuality != null ? `${met.avgQuality}/5` : "—"} />
+                  </div>
+
+                  <div className="mt-4 grid gap-3 md:grid-cols-2">
+                    <div className="rounded-lg bg-ok/5 p-3">
+                      <div className="text-xs font-bold uppercase tracking-wide text-ok">Strengths</div>
+                      <p className="mt-1 text-sm">{r.strengths || "—"}</p>
+                    </div>
+                    <div className="rounded-lg bg-warn/5 p-3">
+                      <div className="text-xs font-bold uppercase tracking-wide text-warn">To improve</div>
+                      <p className="mt-1 text-sm">{r.weaknesses || "—"}</p>
+                    </div>
+                    <div className="rounded-lg bg-brand-tint p-3 md:col-span-2">
+                      <div className="text-xs font-bold uppercase tracking-wide text-brand-dark">Next target</div>
+                      <p className="mt-1 text-sm">{r.nextTarget || "—"}</p>
+                    </div>
+                  </div>
+
+                  {r.teacherComment && (
+                    <p className="mt-3 border-t border-black/5 pt-3 text-sm leading-relaxed text-ink/80">{r.teacherComment}</p>
+                  )}
+
+                  {canEditReports && (
+                    <ReportCardEditor
+                      card={{
+                        id: r.id, period: r.period,
+                        strengths: r.strengths ?? "", weaknesses: r.weaknesses ?? "",
+                        nextTarget: r.nextTarget ?? "", teacherComment: r.teacherComment ?? "",
+                        published: Boolean(r.publishedAt),
+                      }}
+                    />
+                  )}
+                </div>
+              );
+            })}
             {!student.reportCards.length && <p className="py-6 text-center text-sm text-ink/40">No report cards yet.</p>}
           </div>
         )}
