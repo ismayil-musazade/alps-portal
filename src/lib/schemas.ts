@@ -1,0 +1,44 @@
+import { z } from "zod";
+
+/** Shared zod schemas — every write endpoint validates against these.
+ *  .strict() rejects any field not listed (anti-tampering). */
+
+export const LeadCreateSchema = z.object({
+  fullName: z.string().trim().min(2).max(120),
+  phone: z.string().trim().min(7).max(30),
+  parentName: z.string().trim().max(120).optional().or(z.literal("")),
+  parentPhone: z.string().trim().max(30).optional().or(z.literal("")),
+  school: z.string().trim().max(160).optional().or(z.literal("")),
+  gradeLevel: z.string().trim().max(40).optional().or(z.literal("")),
+  source: z.enum(["INSTAGRAM", "WHATSAPP", "REFERRAL", "WALK_IN", "PHONE_CALL", "WEBSITE", "OTHER"]),
+  interestedCourse: z.enum(["IELTS", "SAT", "GENERAL_ENGLISH", "OTHER"]).optional().or(z.literal("")),
+  currentLevel: z.string().trim().max(60).optional().or(z.literal("")),
+  targetScore: z.string().trim().max(60).optional().or(z.literal("")),
+  preferredSchedule: z.string().trim().max(120).optional().or(z.literal("")),
+  groupPreference: z.string().trim().max(40).optional().or(z.literal("")),
+  responsibleStaffId: z.string().trim().optional().or(z.literal("")),
+  nextFollowUpAt: z.string().optional().or(z.literal("")), // yyyy-mm-dd
+  lastContactNote: z.string().trim().max(2000).optional().or(z.literal("")),
+}).strict();
+
+export const LeadUpdateSchema = LeadCreateSchema.partial().extend({
+  status: z.enum([
+    "NEW", "CONTACTED", "PLACEMENT_BOOKED", "PLACEMENT_DONE",
+    "TRIAL_BOOKED", "INTERESTED", "WAITING_DECISION", "CONVERTED", "LOST",
+  ]).optional(),
+  lostReason: z.string().trim().max(500).optional().or(z.literal("")),
+}).strict();
+
+export const ActivityCreateSchema = z.object({
+  type: z.enum(["NOTE", "CALL", "FOLLOW_UP"]),
+  body: z.string().trim().min(1).max(2000),
+}).strict();
+
+/** Turn "" → undefined and "yyyy-mm-dd" → Date for optional fields */
+export function emptyToNull<T extends Record<string, unknown>>(obj: T) {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(obj)) {
+    out[k] = v === "" ? null : v;
+  }
+  return out;
+}
