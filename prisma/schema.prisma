@@ -1,0 +1,436 @@
+// Alps Academy Management Platform — data model (Build Brief §17)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- enums ----------
+
+enum Role {
+  MANAGER
+  STAFF
+  TEACHER
+  STUDENT
+  PARENT
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  PLACEMENT_BOOKED
+  PLACEMENT_DONE
+  TRIAL_BOOKED
+  INTERESTED
+  WAITING_DECISION
+  CONVERTED
+  LOST
+}
+
+enum LeadSource {
+  INSTAGRAM
+  WHATSAPP
+  REFERRAL
+  WALK_IN
+  PHONE_CALL
+  WEBSITE
+  OTHER
+}
+
+enum StudentStatus {
+  ACTIVE
+  FROZEN
+  COMPLETED
+  DROPPED
+  WAITING_GROUP
+}
+
+enum CourseType {
+  IELTS
+  SAT
+  GENERAL_ENGLISH
+  OTHER
+}
+
+enum GroupStatus {
+  ACTIVE
+  FINISHED
+  PLANNED
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  COMPLETED
+  DROPPED
+}
+
+enum TaskCategory {
+  PRACTICE_TEST
+  VOCAB_LIST
+  READING_ARTICLE
+  HOMEWORK
+  WRITING_TASK
+  SPEAKING_TASK
+  SKILL_CHECKLIST
+  EXAM_REVIEW
+}
+
+enum TaskStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  SUBMITTED
+  COMPLETED
+  MISSING
+  LATE
+}
+
+enum SkillStatus {
+  NOT_STARTED
+  LEARNING
+  NEEDS_IMPROVEMENT
+  GOOD
+  MASTERED
+}
+
+enum ExamType {
+  PLACEMENT
+  PROGRESS
+  MOCK
+  FINAL
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+}
+
+enum NoteVisibility {
+  MANAGER_ONLY
+  STAFF
+  TEACHER
+}
+
+enum ActivityType {
+  NOTE
+  CALL
+  STATUS_CHANGE
+  FOLLOW_UP
+}
+
+// ---------- models ----------
+
+model User {
+  id                 String     @id @default(cuid())
+  name               String
+  email              String?    @unique
+  phone              String?    @unique
+  passwordHash       String
+  role               Role
+  status             UserStatus @default(ACTIVE)
+  mustChangePassword Boolean    @default(true)
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  studentProfile   StudentProfile? @relation("StudentUser")
+  parentLinks      ParentLink[]
+  taughtGroups     Group[]         @relation("GroupTeacher")
+  enrollmentsAsTeacher Enrollment[] @relation("EnrollmentTeacher")
+  responsibleLeads Lead[]          @relation("LeadStaff")
+  leadActivities   LeadActivity[]
+  internalNotes    InternalNote[]
+  loginAttempts    LoginAttempt[]
+}
+
+model Lead {
+  id                 String     @id @default(cuid())
+  fullName           String
+  phone              String
+  parentName         String?
+  parentPhone        String?
+  dateOfBirth        DateTime?
+  school             String?
+  gradeLevel         String?
+  source             LeadSource @default(OTHER)
+  interestedCourse   CourseType?
+  currentLevel       String?
+  targetScore        String?
+  preferredSchedule  String?
+  groupPreference    String?    // group / individual
+  status             LeadStatus @default(NEW)
+  responsibleStaffId String?
+  responsibleStaff   User?      @relation("LeadStaff", fields: [responsibleStaffId], references: [id])
+  firstContactAt     DateTime?
+  nextFollowUpAt     DateTime?
+  lastContactNote    String?
+  lostReason         String?
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  activities     LeadActivity[]
+  internalNotes  InternalNote[]
+  studentProfile StudentProfile? @relation("LeadConversion")
+
+  @@index([status])
+  @@index([responsibleStaffId])
+  @@index([nextFollowUpAt])
+}
+
+model LeadActivity {
+  id        String       @id @default(cuid())
+  leadId    String
+  lead      Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User         @relation(fields: [authorId], references: [id])
+  type      ActivityType @default(NOTE)
+  body      String
+  createdAt DateTime     @default(now())
+
+  @@index([leadId])
+}
+
+model StudentProfile {
+  id             String        @id @default(cuid())
+  userId         String?       @unique
+  user           User?         @relation("StudentUser", fields: [userId], references: [id])
+  leadId         String?       @unique
+  lead           Lead?         @relation("LeadConversion", fields: [leadId], references: [id])
+  fullName       String
+  phone          String?
+  parentName     String?
+  parentPhone    String?
+  dateOfBirth    DateTime?
+  school         String?
+  gradeLevel     String?
+  currentLevel   String?
+  previousScores String?
+  strengths      String?
+  weaknesses     String?
+  learningNotes  String?
+  status         StudentStatus @default(ACTIVE)
+  startDate      DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  parentLinks   ParentLink[]
+  enrollments   Enrollment[]
+  goals         Goal[]
+  tasks         StudentTask[]
+  skillStatuses StudentSkillStatus[]
+  exams         Exam[]
+  attendance    Attendance[]
+  reportCards   ReportCard[]
+  internalNotes InternalNote[]
+
+  @@index([status])
+  @@index([fullName])
+}
+
+model ParentLink {
+  id           String         @id @default(cuid())
+  parentUserId String
+  parentUser   User           @relation(fields: [parentUserId], references: [id], onDelete: Cascade)
+  studentId    String
+  student      StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([parentUserId, studentId])
+}
+
+model Course {
+  id          String     @id @default(cuid())
+  name        String
+  type        CourseType
+  description String?
+
+  groups      Group[]
+  enrollments Enrollment[]
+}
+
+model Group {
+  id        String      @id @default(cuid())
+  name      String
+  courseId  String
+  course    Course      @relation(fields: [courseId], references: [id])
+  teacherId String?
+  teacher   User?       @relation("GroupTeacher", fields: [teacherId], references: [id])
+  schedule  String?
+  status    GroupStatus @default(ACTIVE)
+  createdAt DateTime    @default(now())
+
+  enrollments Enrollment[]
+  attendance  Attendance[]
+
+  @@index([teacherId])
+}
+
+model Enrollment {
+  id        String           @id @default(cuid())
+  studentId String
+  student   StudentProfile   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  courseId  String
+  course    Course           @relation(fields: [courseId], references: [id])
+  groupId   String?
+  group     Group?           @relation(fields: [groupId], references: [id])
+  teacherId String?
+  teacher   User?            @relation("EnrollmentTeacher", fields: [teacherId], references: [id])
+  startDate DateTime         @default(now())
+  endDate   DateTime?
+  status    EnrollmentStatus @default(ACTIVE)
+
+  @@index([studentId])
+  @@index([groupId])
+  @@index([teacherId])
+}
+
+model Goal {
+  id             String         @id @default(cuid())
+  studentId      String
+  student        StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  courseType     CourseType
+  targetOverall  String?
+  subTargets     Json?          // e.g. {"reading":"7.0","listening":"7.5"} or SAT {"rw":700,"math":750}
+  targetExamDate DateTime?
+  notes          String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([studentId])
+}
+
+model TaskTemplate {
+  id           String       @id @default(cuid())
+  courseType   CourseType
+  title        String
+  category     TaskCategory
+  skillArea    String?
+  defaultOrder Int          @default(0)
+
+  studentTasks StudentTask[]
+
+  @@index([courseType])
+}
+
+model StudentTask {
+  id                  String        @id @default(cuid())
+  studentId           String
+  student             StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  templateId          String?
+  template            TaskTemplate? @relation(fields: [templateId], references: [id])
+  title               String
+  category            TaskCategory
+  courseType          CourseType
+  assignedAt          DateTime      @default(now())
+  deadline            DateTime?
+  status              TaskStatus    @default(NOT_STARTED)
+  teacherApproved     Boolean       @default(false)
+  score               Float?        // 1-5 or percentage; interpreted by scoreType
+  scoreMax            Float         @default(5)
+  comment             String?
+  mistakeReviewDone   Boolean       @default(false)
+  studentSubmittedAt  DateTime?
+  updatedById         String?
+  updatedAt           DateTime      @updatedAt
+
+  @@index([studentId, status])
+}
+
+model StudentSkillStatus {
+  id        String         @id @default(cuid())
+  studentId String
+  student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  courseType CourseType
+  skill     String
+  status    SkillStatus    @default(NOT_STARTED)
+  updatedAt DateTime       @updatedAt
+
+  @@unique([studentId, skill])
+}
+
+model Exam {
+  id                String         @id @default(cuid())
+  studentId         String
+  student           StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  courseType        CourseType
+  examType          ExamType
+  examDate          DateTime
+  sectionScores     Json?          // per-course sections, brief §12
+  totalScore        String?
+  teacherComment    String?
+  recommendedAction String?
+  createdById       String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  @@index([studentId, examType])
+}
+
+model Attendance {
+  id         String           @id @default(cuid())
+  studentId  String
+  student    StudentProfile   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  groupId    String
+  group      Group            @relation(fields: [groupId], references: [id])
+  lessonDate DateTime         @db.Date
+  status     AttendanceStatus
+  note       String?
+  markedById String?
+  createdAt  DateTime         @default(now())
+
+  @@unique([studentId, groupId, lessonDate])
+  @@index([groupId, lessonDate])
+}
+
+model ReportCard {
+  id              String         @id @default(cuid())
+  studentId       String
+  student         StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  period          String         // e.g. "2026-09" or "Sep-Oct 2026"
+  metrics         Json?          // frozen snapshot: attendancePct, taskPct, avgQuality, latestExam, progress
+  strengths       String?
+  weaknesses      String?
+  nextTarget      String?
+  teacherComment  String?
+  publishedAt     DateTime?      // null = draft, invisible to student/parent
+  createdById     String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@unique([studentId, period])
+}
+
+model InternalNote {
+  id         String          @id @default(cuid())
+  studentId  String?
+  student    StudentProfile? @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  leadId     String?
+  lead       Lead?           @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  authorId   String
+  author     User            @relation(fields: [authorId], references: [id])
+  visibility NoteVisibility  @default(STAFF)
+  body       String
+  createdAt  DateTime        @default(now())
+
+  @@index([studentId])
+  @@index([leadId])
+}
+
+model LoginAttempt {
+  id         String   @id @default(cuid())
+  identifier String   // email or phone tried
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  success    Boolean
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  @@index([identifier, createdAt])
+}

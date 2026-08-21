@@ -1,0 +1,112 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import type { Role } from "@prisma/client";
+import { useState } from "react";
+
+const NAV: Record<Role, { href: string; label: string }[]> = {
+  MANAGER: [
+    { href: "/app", label: "Dashboard" },
+    { href: "/app/leads", label: "CRM / Leads" },
+    { href: "/app/students", label: "Students" },
+    { href: "/app/groups", label: "Courses & Groups" },
+    { href: "/app/users", label: "Users" },
+  ],
+  STAFF: [
+    { href: "/app", label: "Dashboard" },
+    { href: "/app/leads", label: "CRM / Leads" },
+    { href: "/app/students", label: "Students" },
+  ],
+  TEACHER: [
+    { href: "/app", label: "Dashboard" },
+    { href: "/app/students", label: "My Students" },
+    { href: "/app/attendance", label: "Attendance" },
+  ],
+  STUDENT: [
+    { href: "/app", label: "My Progress" },
+  ],
+  PARENT: [
+    { href: "/app", label: "My Child" },
+  ],
+};
+
+export function AppNav({ role, name }: { role: Role; name: string }) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+
+  async function logout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
+    router.refresh();
+  }
+
+  const items = NAV[role];
+
+  return (
+    <header className="sticky top-0 z-40 border-b border-black/10 bg-white">
+      <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4">
+        <Link href="/app" className="flex items-center gap-2 font-extrabold tracking-wide">
+          <svg viewBox="0 0 100 100" className="h-7 w-7" aria-hidden>
+            <path fill="#b0322c" d="M44 6h12l40 88H70L52 54 40 78l8 2-16 14H4z" />
+          </svg>
+          <span className="hidden sm:inline">ALPS</span>
+        </Link>
+
+        <nav className="hidden gap-1 md:flex">
+          {items.map((i) => (
+            <Link
+              key={i.href}
+              href={i.href}
+              className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
+                pathname === i.href
+                  ? "bg-brand-tint text-brand-dark"
+                  : "text-ink/70 hover:bg-black/5"
+              }`}
+            >
+              {i.label}
+            </Link>
+          ))}
+        </nav>
+
+        <div className="ml-auto flex items-center gap-3">
+          <span className="hidden text-sm text-ink/60 sm:inline">
+            {name} · <span className="font-semibold">{role.toLowerCase()}</span>
+          </span>
+          <button
+            onClick={logout}
+            className="rounded-full border border-black/15 px-3 py-1 text-sm font-medium hover:bg-black/5"
+          >
+            Sign out
+          </button>
+          <button
+            className="rounded-lg border border-black/15 p-1.5 md:hidden"
+            onClick={() => setOpen(!open)}
+            aria-label="Menu"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M3 6h18M3 12h18M3 18h18" />
+            </svg>
+          </button>
+        </div>
+      </div>
+      {open && (
+        <nav className="border-t border-black/10 bg-white px-4 py-2 md:hidden">
+          {items.map((i) => (
+            <Link
+              key={i.href}
+              href={i.href}
+              onClick={() => setOpen(false)}
+              className={`block rounded-lg px-3 py-2 text-sm font-medium ${
+                pathname === i.href ? "bg-brand-tint text-brand-dark" : "text-ink/70"
+              }`}
+            >
+              {i.label}
+            </Link>
+          ))}
+        </nav>
+      )}
+    </header>
+  );
+}

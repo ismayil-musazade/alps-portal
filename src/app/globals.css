@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+/* Alps Academy brand: red #b0322c · black #14171a · white */
+@theme {
+  --color-brand: #b0322c;
+  --color-brand-dark: #8c2622;
+  --color-brand-light: #c8413a;
+  --color-brand-tint: #fbeceb;
+  --color-ink: #14171a;
+  --color-paper: #f8f6f5;
+  --color-ok: #2e9e6b;
+  --color-warn: #d97706;
+  --color-risk: #c0271b;
+}
+
+body {
+  @apply bg-paper text-ink antialiased;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+}
