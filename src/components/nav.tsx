@@ -21,7 +21,6 @@ const NAV: Record<Role, { href: string; label: string }[]> = {
   TEACHER: [
     { href: "/app", label: "Dashboard" },
     { href: "/app/students", label: "My Students" },
-    { href: "/app/attendance", label: "Attendance" },
   ],
   STUDENT: [
     { href: "/app", label: "My Progress" },

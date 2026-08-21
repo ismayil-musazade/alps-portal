@@ -8,6 +8,7 @@ import type { Role } from "@prisma/client";
 
 export type Capability =
   | "users.manage"
+  | "groups.manage" | "groups.view"
   | "leads.view" | "leads.edit"
   | "students.view.all" | "students.view.assigned" | "students.view.own" | "students.view.child"
   | "students.edit"
@@ -19,13 +20,14 @@ export type Capability =
 
 const matrix: Record<Role, Capability[]> = {
   MANAGER: [
-    "users.manage", "leads.view", "leads.edit",
+    "users.manage", "groups.manage", "groups.view", "leads.view", "leads.edit",
     "students.view.all", "students.edit",
     "academics.edit", "academics.view",
     "attendance.mark", "reports.edit", "reports.view",
     "notes.internal.view", "notes.internal.edit",
   ],
   STAFF: [
+    "groups.view",
     "leads.view", "leads.edit",
     "students.view.all", "students.edit",
     "academics.view", "reports.view",
