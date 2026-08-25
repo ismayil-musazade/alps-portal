@@ -11,13 +11,20 @@ const db = new PrismaClient();
 async function main() {
   const hash = (pw: string) => bcrypt.hash(pw, 12);
 
+  /**
+   * Demo passwords are visible in this file, so they are safe only on a local
+   * machine. On any deployed environment set DEMO_PASSWORD to something private
+   * and share that with the people who need the demo.
+   */
+  const demoPw = (fallback: string) => process.env.DEMO_PASSWORD ?? fallback;
+
   // ---- users ----
   const [manager, staff, teacher, studentUser, parentUser] = await Promise.all([
-    db.user.create({ data: { name: "Demo Manager", email: "manager@alps.local", passwordHash: await hash("Manager!234"), role: Role.MANAGER, mustChangePassword: false } }),
-    db.user.create({ data: { name: "Demo Staff", email: "staff@alps.local", passwordHash: await hash("Staff!234"), role: Role.STAFF, mustChangePassword: false } }),
-    db.user.create({ data: { name: "Orkhan Safarov", email: "teacher@alps.local", passwordHash: await hash("Teacher!234"), role: Role.TEACHER, mustChangePassword: false } }),
-    db.user.create({ data: { name: "Cavid Cebiyev", phone: "+994501234567", email: "student@alps.local", passwordHash: await hash("Student!234"), role: Role.STUDENT, mustChangePassword: false } }),
-    db.user.create({ data: { name: "Parent Cebiyev", phone: "+994507654321", email: "parent@alps.local", passwordHash: await hash("Parent!234"), role: Role.PARENT, mustChangePassword: false } }),
+    db.user.create({ data: { name: "Demo Manager", email: "manager@alps.local", passwordHash: await hash(demoPw("Manager!234")), role: Role.MANAGER, mustChangePassword: false } }),
+    db.user.create({ data: { name: "Demo Staff", email: "staff@alps.local", passwordHash: await hash(demoPw("Staff!234")), role: Role.STAFF, mustChangePassword: false } }),
+    db.user.create({ data: { name: "Orkhan Safarov", email: "teacher@alps.local", passwordHash: await hash(demoPw("Teacher!234")), role: Role.TEACHER, mustChangePassword: false } }),
+    db.user.create({ data: { name: "Cavid Cebiyev", phone: "+994501234567", email: "student@alps.local", passwordHash: await hash(demoPw("Student!234")), role: Role.STUDENT, mustChangePassword: false } }),
+    db.user.create({ data: { name: "Parent Cebiyev", phone: "+994507654321", email: "parent@alps.local", passwordHash: await hash(demoPw("Parent!234")), role: Role.PARENT, mustChangePassword: false } }),
   ]);
 
   // ---- courses & group ----
@@ -181,7 +188,12 @@ async function main() {
   });
 
   console.log("Seed complete.");
-  console.log("Logins: manager@alps.local / Manager!234 · staff@alps.local / Staff!234 · teacher@alps.local / Teacher!234 · student@alps.local / Student!234 · parent@alps.local / Parent!234");
+  if (process.env.DEMO_PASSWORD) {
+    console.log("All five demo accounts use the password from DEMO_PASSWORD.");
+    console.log("Logins: manager@ / staff@ / teacher@ / student@ / parent@alps.local");
+  } else {
+    console.log("Logins: manager@alps.local / Manager!234 · staff@alps.local / Staff!234 · teacher@alps.local / Teacher!234 · student@alps.local / Student!234 · parent@alps.local / Parent!234");
+  }
 }
 
 main().finally(() => db.$disconnect());
