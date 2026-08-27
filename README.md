@@ -1,37 +1,69 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Alps Academy — Management Portal
 
-## Getting Started
+Private, role-based management platform for Alps Academy: CRM for leads,
+student profiles with measurable academic progress, task tracking, exams,
+attendance, report cards and role-specific dashboards.
 
-First, run the development server:
+**This is not a public website.** Accounts are created by a manager; there is no
+self-registration, and the app is excluded from search engines.
+
+## Stack
+
+| Layer | Technology |
+|---|---|
+| Framework | Next.js (App Router) + TypeScript |
+| Database | PostgreSQL via Prisma |
+| Auth | Email-or-phone + password, encrypted HttpOnly session cookies |
+| Styling | Tailwind CSS |
+| Validation | zod on every write endpoint |
+
+## Running locally
 
 ```bash
+npm install
+cp .env.example .env      # then fill in DATABASE_URL and SESSION_SECRET
+npx prisma migrate dev
+npm run seed              # optional demo data
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000 — you land on the login screen.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Name | Purpose |
+|---|---|
+| `DATABASE_URL` | PostgreSQL connection string (use the **pooled** one in production) |
+| `SESSION_SECRET` | 64-character random string that encrypts login cookies |
+| `DEMO_PASSWORD` | Optional. Overrides all demo account passwords when seeding |
 
-## Learn More
+Generate a session secret with `openssl rand -hex 32`.
 
-To learn more about Next.js, take a look at the following resources:
+## Useful commands
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run dev                                    # local development
+npm run build                                  # production build (runs migrations)
+npx tsx prisma/create-admin.ts "Name" email    # first real manager account
+npx tsx prisma/wipe-demo-data.ts               # remove demo data before real use
+npx prisma studio                              # browse the database
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Documentation
 
-## Deploy on Vercel
+| Document | Contents |
+|---|---|
+| [docs/TESTING.md](docs/TESTING.md) | Full manual test plan, role by role |
+| [docs/REQUIREMENTS_STATUS.md](docs/REQUIREMENTS_STATUS.md) | Coverage against the original build brief |
+| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Hosting options, database management, how deploys work |
+| [docs/MANAGER_BRIEFING.md](docs/MANAGER_BRIEFING.md) | Plain-language explanation and decision list |
+| [docs/LMS_BUILD_PLAN.md](docs/LMS_BUILD_PLAN.md) | Original phased build plan |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Security notes
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-# alps-portal
+- All permission checks run server-side; queries are scoped to the caller
+  (teachers see only their groups, parents only their children).
+- Internal notes are never serialised into student or parent responses.
+- Login is rate-limited; passwords are hashed with bcrypt.
+- Accounts created by a manager start with a temporary password and are
+  confined to the change-password screen until it is replaced.
