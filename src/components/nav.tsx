@@ -8,21 +8,24 @@ import { useState } from "react";
 const NAV: Record<Role, { href: string; label: string }[]> = {
   MANAGER: [
     { href: "/app", label: "Dashboard" },
-    { href: "/app/leads", label: "CRM / Leads" },
+    { href: "/app/leads", label: "Leads" },
     { href: "/app/students", label: "Students" },
-    { href: "/app/groups", label: "Courses & Groups" },
+    { href: "/app/groups", label: "Courses" },
     { href: "/app/attendance", label: "Attendance" },
+    { href: "/app/tasks", label: "Tasks" },
     { href: "/app/users", label: "Users" },
   ],
   STAFF: [
     { href: "/app", label: "Dashboard" },
-    { href: "/app/leads", label: "CRM / Leads" },
+    { href: "/app/leads", label: "Leads" },
     { href: "/app/students", label: "Students" },
+    { href: "/app/tasks", label: "My tasks" },
   ],
   TEACHER: [
     { href: "/app", label: "Dashboard" },
-    { href: "/app/students", label: "My Students" },
+    { href: "/app/students", label: "Students" },
     { href: "/app/attendance", label: "Attendance" },
+    { href: "/app/tasks", label: "My tasks" },
   ],
   STUDENT: [
     { href: "/app", label: "My Progress" },
@@ -57,7 +60,7 @@ export function AppNav({
 
   return (
     <header className="sticky top-0 z-40 border-b border-black/10 bg-white">
-      <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4">
+      <div className="mx-auto flex h-14 max-w-6xl items-center gap-2 px-4">
         <Link href="/app" className="flex items-center gap-2 font-extrabold tracking-wide">
           <svg viewBox="0 0 100 100" className="h-7 w-7" aria-hidden>
             <path fill="#b0322c" d="M44 6h12l40 88H70L52 54 40 78l8 2-16 14H4z" />
@@ -65,12 +68,12 @@ export function AppNav({
           <span className="hidden sm:inline">ALPS</span>
         </Link>
 
-        <nav className="hidden gap-1 md:flex">
+        <nav className="hidden gap-0.5 md:flex">
           {items.map((i) => (
             <Link
               key={i.href}
               href={i.href}
-              className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
+              className={`whitespace-nowrap rounded-lg px-2.5 py-1.5 text-sm font-medium ${
                 pathname === i.href
                   ? "bg-brand-tint text-brand-dark"
                   : "text-ink/70 hover:bg-black/5"
@@ -81,7 +84,7 @@ export function AppNav({
           ))}
         </nav>
 
-        <div className="ml-auto flex items-center gap-3">
+        <div className="ml-auto flex shrink-0 items-center gap-2">
           {showBell && (
             <Link
               href="/app/reminders"
@@ -102,15 +105,15 @@ export function AppNav({
               )}
             </Link>
           )}
-          <span className="hidden text-sm text-ink/60 sm:inline">
+          <span className="hidden whitespace-nowrap text-sm text-ink/60 lg:inline">
             {name} · <span className="font-semibold">{role.toLowerCase()}</span>
           </span>
-          <Link href="/app/change-password" className="hidden text-xs font-semibold text-ink/50 hover:text-brand sm:inline">
+          <Link href="/app/change-password" className="hidden text-xs font-semibold text-ink/50 hover:text-brand xl:inline">
             password
           </Link>
           <button
             onClick={logout}
-            className="rounded-full border border-black/15 px-3 py-1 text-sm font-medium hover:bg-black/5"
+            className="whitespace-nowrap rounded-full border border-black/15 px-3 py-1 text-sm font-medium hover:bg-black/5"
           >
             Sign out
           </button>

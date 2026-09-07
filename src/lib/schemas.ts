@@ -51,6 +51,27 @@ export const ReminderUpdateSchema = z.object({
   status: z.enum(["OPEN", "DONE", "DISMISSED"]).optional(),
 }).strict();
 
+export const StaffTaskCreateSchema = z.object({
+  title: z.string().trim().min(2).max(160),
+  description: z.string().trim().max(4000).optional().or(z.literal("")),
+  assignedToId: z.string().trim().min(1),
+  dueAt: z.string().optional().or(z.literal("")),
+}).strict();
+
+export const StaffTaskUpdateSchema = z.object({
+  title: z.string().trim().min(2).max(160).optional(),
+  description: z.string().trim().max(4000).optional().or(z.literal("")),
+  assignedToId: z.string().trim().min(1).optional(),
+  dueAt: z.string().optional().or(z.literal("")),
+  status: z.enum(["TODO", "IN_PROGRESS", "SUBMITTED", "APPROVED", "REJECTED"]).optional(),
+  managerNote: z.string().trim().max(2000).optional().or(z.literal("")),
+}).strict();
+
+export const FileReviewSchema = z.object({
+  status: z.enum(["PENDING", "APPROVED", "REJECTED"]),
+  reviewNote: z.string().trim().max(1000).optional().or(z.literal("")),
+}).strict();
+
 /** Turn "" → undefined and "yyyy-mm-dd" → Date for optional fields */
 export function emptyToNull<T extends Record<string, unknown>>(obj: T) {
   const out: Record<string, unknown> = {};
