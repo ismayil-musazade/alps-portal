@@ -10,7 +10,9 @@
     "postinstall": "prisma generate",
     "seed": "tsx prisma/seed.ts",
     "migrate": "prisma migrate deploy",
-    "check": "tsx prisma/check-users.ts"
+    "check": "tsx prisma/check-users.ts",
+    "migrate:deploy": "prisma migrate deploy || (sleep 8 && prisma migrate deploy)",
+    "vercel-build": "npm run migrate:deploy && next build"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
