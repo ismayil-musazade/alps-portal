@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Field, inputCls, StatusBadge } from "@/components/ui";
+import { Field, inputCls, inputBase, StatusBadge } from "@/components/ui";
 
 /* ---------------- assign panel ---------------- */
 
@@ -82,7 +82,7 @@ export function AssignTasksPanel({ studentId, templates, assignedTemplateIds, de
     <div className="rounded-xl border border-black/10 bg-white p-4">
       <div className="flex flex-wrap items-center gap-3">
         <h3 className="text-sm font-bold uppercase tracking-wide text-ink/50">Assign from templates</h3>
-        <select value={courseType} onChange={(e) => { setCourseType(e.target.value); setSelected(new Set()); }} className={`${inputCls} w-44`}>
+        <select value={courseType} onChange={(e) => { setCourseType(e.target.value); setSelected(new Set()); }} className={`${inputBase} w-44`}>
           {["SAT","IELTS","GENERAL_ENGLISH","OTHER"].map((c) => <option key={c} value={c}>{c.replaceAll("_"," ")}</option>)}
         </select>
         <button onClick={() => setOpen(false)} className="ml-auto text-sm font-semibold text-ink/50 hover:text-ink">close</button>

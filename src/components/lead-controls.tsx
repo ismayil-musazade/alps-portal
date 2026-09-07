@@ -2,17 +2,28 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { inputCls } from "@/components/ui";
+import { inputCls, inputBase } from "@/components/ui";
 
 const STATUSES = ["NEW","CONTACTED","PLACEMENT_BOOKED","PLACEMENT_DONE","TRIAL_BOOKED","INTERESTED","WAITING_DECISION","LOST"] as const;
 
 /** Status + follow-up quick controls, and the add-activity box. */
-export function LeadControls({ leadId, status, nextFollowUpAt }: { leadId: string; status: string; nextFollowUpAt: string }) {
+export function LeadControls({
+  leadId,
+  status,
+  nextFollowUpAt,
+  followUpNote,
+}: {
+  leadId: string;
+  status: string;
+  nextFollowUpAt: string;
+  followUpNote: string;
+}) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [newStatus, setNewStatus] = useState(status);
   const [followUp, setFollowUp] = useState(nextFollowUpAt);
+  const [note, setNote] = useState(followUpNote);
   const [lostReason, setLostReason] = useState("");
 
   async function save() {
@@ -21,6 +32,7 @@ export function LeadControls({ leadId, status, nextFollowUpAt }: { leadId: strin
     const body: Record<string, string> = {};
     if (newStatus !== status) body.status = newStatus;
     if (followUp !== nextFollowUpAt) body.nextFollowUpAt = followUp;
+    if (note !== followUpNote) body.followUpNote = note;
     if (newStatus === "LOST" && lostReason) body.lostReason = lostReason;
     const res = await fetch(`/api/leads/${leadId}`, {
       method: "PATCH",
@@ -32,7 +44,7 @@ export function LeadControls({ leadId, status, nextFollowUpAt }: { leadId: strin
     setBusy(false);
   }
 
-  const dirty = newStatus !== status || followUp !== nextFollowUpAt;
+  const dirty = newStatus !== status || followUp !== nextFollowUpAt || note !== followUpNote;
 
   return (
     <div className="rounded-xl border border-black/10 bg-white p-4">
@@ -51,6 +63,16 @@ export function LeadControls({ leadId, status, nextFollowUpAt }: { leadId: strin
       )}
       <label className="mb-1 mt-3 block text-sm font-semibold">Next follow-up</label>
       <input type="date" value={followUp} onChange={(e) => setFollowUp(e.target.value)} className={inputCls} />
+      <label className="mb-1 mt-2 block text-sm font-semibold">
+        Why <span className="font-normal text-ink/40">— what this follow-up is for</span>
+      </label>
+      <textarea
+        rows={3}
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        placeholder="e.g. Mother asked us to call back after the school exams to confirm the Saturday group."
+        className={inputCls}
+      />
       {error && <p className="mt-2 rounded-lg bg-brand-tint px-3 py-2 text-sm text-brand-dark">{error}</p>}
       <button
         onClick={save}
@@ -87,7 +109,7 @@ export function ActivityBox({ leadId }: { leadId: string }) {
 
   return (
     <form onSubmit={add} className="flex gap-2">
-      <select value={type} onChange={(e) => setType(e.target.value)} className={`${inputCls} w-28 shrink-0`}>
+      <select value={type} onChange={(e) => setType(e.target.value)} className={`${inputBase} w-28 shrink-0`}>
         <option value="NOTE">Note</option>
         <option value="CALL">Call</option>
         <option value="FOLLOW_UP">Follow-up</option>
@@ -96,7 +118,7 @@ export function ActivityBox({ leadId }: { leadId: string }) {
         value={body}
         onChange={(e) => setBody(e.target.value)}
         placeholder="What happened?"
-        className={inputCls}
+        className={`${inputBase} min-w-0 flex-1`}
       />
       <button disabled={busy || !body.trim()} className="shrink-0 rounded-lg bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-black disabled:opacity-40">
         Add

@@ -19,6 +19,7 @@ export const LeadCreateSchema = z.object({
   responsibleStaffId: z.string().trim().optional().or(z.literal("")),
   nextFollowUpAt: z.string().optional().or(z.literal("")), // yyyy-mm-dd
   lastContactNote: z.string().trim().max(2000).optional().or(z.literal("")),
+  followUpNote: z.string().trim().max(2000).optional().or(z.literal("")),
 }).strict();
 
 export const LeadUpdateSchema = LeadCreateSchema.partial().extend({
@@ -32,6 +33,22 @@ export const LeadUpdateSchema = LeadCreateSchema.partial().extend({
 export const ActivityCreateSchema = z.object({
   type: z.enum(["NOTE", "CALL", "FOLLOW_UP"]),
   body: z.string().trim().min(1).max(2000),
+}).strict();
+
+export const ReminderCreateSchema = z.object({
+  title: z.string().trim().min(2).max(160),
+  body: z.string().trim().max(1000).optional().or(z.literal("")),
+  dueAt: z.string().min(8), // yyyy-mm-dd or full ISO
+  assignedToId: z.string().trim().optional().or(z.literal("")),
+  leadId: z.string().trim().optional().or(z.literal("")),
+  studentId: z.string().trim().optional().or(z.literal("")),
+}).strict();
+
+export const ReminderUpdateSchema = z.object({
+  title: z.string().trim().min(2).max(160).optional(),
+  body: z.string().trim().max(1000).optional().or(z.literal("")),
+  dueAt: z.string().min(8).optional(),
+  status: z.enum(["OPEN", "DONE", "DISMISSED"]).optional(),
 }).strict();
 
 /** Turn "" → undefined and "yyyy-mm-dd" → Date for optional fields */

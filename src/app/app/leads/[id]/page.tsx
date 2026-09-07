@@ -6,6 +6,7 @@ import { can } from "@/lib/permissions";
 import { StatusBadge, LEAD_STATUS_TONE } from "@/components/ui";
 import { LeadControls, ActivityBox } from "@/components/lead-controls";
 import { ConvertButton } from "@/components/student-controls";
+import { RemindersPanel } from "@/components/reminders-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,14 @@ export default async function LeadDetail({ params }: { params: Promise<{ id: str
     },
   });
   if (!lead) notFound();
+
+  const staff = can(user.role, "reminders.assign.others")
+    ? await db.user.findMany({
+        where: { status: "ACTIVE", role: { in: ["MANAGER", "STAFF", "TEACHER"] }, id: { not: user.id } },
+        select: { id: true, name: true },
+        orderBy: { name: "asc" },
+      })
+    : undefined;
 
   const canEdit = can(user.role, "leads.edit") && lead.status !== "CONVERTED";
 
@@ -106,6 +115,7 @@ export default async function LeadDetail({ params }: { params: Promise<{ id: str
               leadId={lead.id}
               status={lead.status}
               nextFollowUpAt={lead.nextFollowUpAt?.toISOString().slice(0, 10) ?? ""}
+              followUpNote={lead.followUpNote ?? ""}
             />
           )}
           <div className="rounded-xl border border-black/10 bg-white p-4 text-sm">
@@ -113,7 +123,19 @@ export default async function LeadDetail({ params }: { params: Promise<{ id: str
             <Row label="Created" value={lead.createdAt.toLocaleDateString("en-GB")} />
             <Row label="First contact" value={lead.firstContactAt?.toLocaleDateString("en-GB")} />
             <Row label="Next follow-up" value={lead.nextFollowUpAt?.toLocaleDateString("en-GB")} />
+            {lead.followUpNote && (
+              <div className="mt-2 rounded-lg bg-brand-tint/50 px-3 py-2">
+                <span className="block text-xs font-bold uppercase tracking-wide text-brand-dark/60">
+                  Why we are following up
+                </span>
+                <p className="mt-0.5 whitespace-pre-line text-ink/80">{lead.followUpNote}</p>
+              </div>
+            )}
           </div>
+
+          {can(user.role, "reminders.use") && (
+            <RemindersPanel leadId={lead.id} canEdit staff={staff} />
+          )}
         </div>
       </div>
     </>

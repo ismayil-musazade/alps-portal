@@ -99,8 +99,18 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
                   <td className="px-4 py-2.5">{l.interestedCourse?.replaceAll("_", " ") ?? "—"}</td>
                   <td className="px-4 py-2.5 text-ink/60">{l.source.replaceAll("_", " ").toLowerCase()}</td>
                   <td className="px-4 py-2.5"><StatusBadge value={l.status} tone={LEAD_STATUS_TONE[l.status]} /></td>
-                  <td className={`px-4 py-2.5 ${overdue ? "font-bold text-risk" : ""}`}>
-                    {l.nextFollowUpAt?.toLocaleDateString("en-GB") ?? "—"}
+                  <td className={`px-4 py-2.5 ${overdue ? "text-risk" : ""}`}>
+                    <span className={overdue ? "font-bold" : ""}>
+                      {l.nextFollowUpAt?.toLocaleDateString("en-GB") ?? "—"}
+                    </span>
+                    {l.followUpNote && (
+                      <span
+                        title={l.followUpNote}
+                        className="mt-0.5 block max-w-[16rem] truncate text-xs font-normal text-ink/45"
+                      >
+                        {l.followUpNote}
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-2.5 text-ink/60">{l.responsibleStaff?.name ?? "—"}</td>
                 </tr>

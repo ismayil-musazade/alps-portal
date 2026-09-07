@@ -10,6 +10,7 @@ import { GoalForm, NoteBox } from "@/components/student-controls";
 import { AssignTasksPanel, TasksTable, SkillsPanel, type TaskDTO } from "@/components/task-controls";
 import { ExamForm, DeleteExamButton } from "@/components/exam-controls";
 import { NewReportCardForm, ReportCardEditor } from "@/components/report-card-controls";
+import { RemindersPanel } from "@/components/reminders-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -90,6 +91,14 @@ export default async function StudentProfile({
     : "readonly" as const;
   const defaultCourseType = activeEnrollment?.course.type ?? "SAT";
 
+  const reminderStaff = can(user.role, "reminders.assign.others")
+    ? await db.user.findMany({
+        where: { status: "ACTIVE", role: { in: ["MANAGER", "STAFF", "TEACHER"] }, id: { not: user.id } },
+        select: { id: true, name: true },
+        orderBy: { name: "asc" },
+      })
+    : undefined;
+
   // internal notes: visibility rules (manager sees all; staff: STAFF+TEACHER; teacher: TEACHER)
   const notes = internal
     ? await db.internalNote.findMany({
@@ -169,6 +178,9 @@ export default async function StudentProfile({
                 <Row label="Grade" value={student.gradeLevel} />
               </Card>
             </div>
+            {can(user.role, "reminders.use") && (
+              <RemindersPanel studentId={student.id} canEdit staff={reminderStaff} />
+            )}
           </div>
         )}
 

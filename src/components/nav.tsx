@@ -32,7 +32,17 @@ const NAV: Record<Role, { href: string; label: string }[]> = {
   ],
 };
 
-export function AppNav({ role, name }: { role: Role; name: string }) {
+export function AppNav({
+  role,
+  name,
+  dueCount = 0,
+  showBell = false,
+}: {
+  role: Role;
+  name: string;
+  dueCount?: number;
+  showBell?: boolean;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -72,6 +82,26 @@ export function AppNav({ role, name }: { role: Role; name: string }) {
         </nav>
 
         <div className="ml-auto flex items-center gap-3">
+          {showBell && (
+            <Link
+              href="/app/reminders"
+              aria-label={dueCount ? `Reminders — ${dueCount} due` : "Reminders"}
+              title={dueCount ? `${dueCount} reminder${dueCount === 1 ? "" : "s"} due` : "Reminders"}
+              className={`relative rounded-full p-1.5 hover:bg-black/5 ${
+                pathname === "/app/reminders" ? "bg-brand-tint text-brand-dark" : "text-ink/60"
+              }`}
+            >
+              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.7 21a2 2 0 0 1-3.4 0" />
+              </svg>
+              {dueCount > 0 && (
+                <span className="absolute -right-0.5 -top-0.5 min-w-[17px] rounded-full bg-brand px-1 text-center text-[10px] font-bold leading-[17px] text-white">
+                  {dueCount > 9 ? "9+" : dueCount}
+                </span>
+              )}
+            </Link>
+          )}
           <span className="hidden text-sm text-ink/60 sm:inline">
             {name} · <span className="font-semibold">{role.toLowerCase()}</span>
           </span>

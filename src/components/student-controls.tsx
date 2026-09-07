@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Field, inputCls } from "@/components/ui";
+import { Field, inputCls, inputBase } from "@/components/ui";
 
 export function ConvertButton({ leadId }: { leadId: string }) {
   const router = useRouter();
@@ -158,12 +158,12 @@ export function NoteBox({ studentId, canManagerOnly }: { studentId: string; canM
 
   return (
     <form onSubmit={add} className="flex flex-wrap gap-2">
-      <select value={visibility} onChange={(e) => setVisibility(e.target.value)} className={`${inputCls} w-40 shrink-0`}>
+      <select value={visibility} onChange={(e) => setVisibility(e.target.value)} className={`${inputBase} w-40 shrink-0`}>
         {canManagerOnly && <option value="MANAGER_ONLY">Manager only</option>}
         <option value="STAFF">Staff + manager</option>
         <option value="TEACHER">Teachers too</option>
       </select>
-      <input value={body} onChange={(e) => setBody(e.target.value)} placeholder="Internal note (never visible to student/parent)" className={`${inputCls} min-w-50 flex-1`} />
+      <input value={body} onChange={(e) => setBody(e.target.value)} placeholder="Internal note (never visible to student/parent)" className={`${inputBase} min-w-0 flex-1`} />
       <button disabled={busy || !body.trim()} className="shrink-0 rounded-lg bg-ink px-4 py-2 text-sm font-semibold text-white disabled:opacity-40">Add</button>
     </form>
   );

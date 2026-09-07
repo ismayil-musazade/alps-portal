@@ -36,5 +36,9 @@ export function Field({ label, children, className }: { label: string; children:
   );
 }
 
-export const inputCls =
-  "w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20";
+/** Field styling without a width — use when the element sits in a flex/grid row
+ *  and needs its own sizing (a `w-*` class cannot beat `w-full` reliably). */
+export const inputBase =
+  "rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20";
+
+export const inputCls = `w-full ${inputBase}`;
