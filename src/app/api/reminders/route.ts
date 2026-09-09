@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { requireCapability } from "@/lib/authz";
 import { can } from "@/lib/permissions";
 import { ReminderCreateSchema } from "@/lib/schemas";
+import { parseInstant } from "@/lib/time";
 
 /** Create a reminder. Non-managers may only create reminders for themselves. */
 export async function POST(req: NextRequest) {
@@ -30,10 +31,8 @@ export async function POST(req: NextRequest) {
     if (!target) return NextResponse.json({ error: "Unknown assignee" }, { status: 400 });
   }
 
-  const due = new Date(d.dueAt);
-  if (Number.isNaN(due.getTime())) {
-    return NextResponse.json({ error: "Invalid date" }, { status: 400 });
-  }
+  const due = parseInstant(d.dueAt);
+  if (!due) return NextResponse.json({ error: "Invalid date" }, { status: 400 });
 
   const reminder = await db.reminder.create({
     data: {

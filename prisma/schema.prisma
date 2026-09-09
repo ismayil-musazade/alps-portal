@@ -172,6 +172,23 @@ enum PostStatus {
   PUBLISHED
 }
 
+/// Where a reminder came from. Automatic ones are kept in step with the thing
+/// that created them, so a changed deadline never leaves a stale bell behind.
+enum ReminderKind {
+  MANUAL
+  LEAD_FOLLOW_UP
+  STAFF_TASK
+}
+
+enum AchievementCategory {
+  OLYMPIAD
+  EXAM
+  CERTIFICATE
+  COMPETITION
+  AWARD
+  OTHER
+}
+
 // ---------- models ----------
 
 model User {
@@ -195,13 +212,17 @@ model User {
   internalNotes        InternalNote[]
   loginAttempts        LoginAttempt[]
 
-  remindersOwned     Reminder[]      @relation("ReminderOwner")
-  remindersCreated   Reminder[]      @relation("ReminderAuthor")
-  staffTasksAssigned StaffTask[]     @relation("StaffTaskAssignee")
-  staffTasksCreated  StaffTask[]     @relation("StaffTaskAuthor")
+  remindersOwned     Reminder[]         @relation("ReminderOwner")
+  remindersCreated   Reminder[]         @relation("ReminderAuthor")
+  staffTasksAssigned StaffTask[]        @relation("StaffTaskAssignee")
+  staffTasksCreated  StaffTask[]        @relation("StaffTaskAuthor")
   staffTaskFiles     StaffTaskFile[]
   examSeat           ExamSeat?
   posts              Post[]
+  taskComments       StaffTaskComment[]
+  achievements       Achievement[]
+  messagesSent       Message[]          @relation("MessageSender")
+  messagesReceived   Message[]          @relation("MessageRecipient")
 }
 
 model Lead {
@@ -233,6 +254,7 @@ model Lead {
   activities     LeadActivity[]
   internalNotes  InternalNote[]
   reminders      Reminder[]
+  achievements   Achievement[]
   testSittings   TestSitting[]
   studentProfile StudentProfile? @relation("LeadConversion")
 
@@ -287,6 +309,7 @@ model StudentProfile {
   reportCards   ReportCard[]
   internalNotes InternalNote[]
   reminders     Reminder[]
+  achievements  Achievement[]
 
   @@index([status])
   @@index([fullName])
@@ -500,6 +523,7 @@ model Reminder {
   body         String?
   dueAt        DateTime
   status       ReminderStatus  @default(OPEN)
+  kind         ReminderKind    @default(MANUAL)
   completedAt  DateTime?
   assignedToId String
   assignedTo   User            @relation("ReminderOwner", fields: [assignedToId], references: [id])
@@ -509,12 +533,15 @@ model Reminder {
   lead         Lead?           @relation(fields: [leadId], references: [id], onDelete: Cascade)
   studentId    String?
   student      StudentProfile? @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  staffTaskId  String?
+  staffTask    StaffTask?      @relation(fields: [staffTaskId], references: [id], onDelete: Cascade)
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
 
   @@index([assignedToId, status, dueAt])
   @@index([leadId])
   @@index([studentId])
+  @@index([staffTaskId])
 }
 
 // ---------- staff tasks assigned by the manager, with file hand-in ----------
@@ -531,13 +558,34 @@ model StaffTask {
   status       StaffTaskStatus @default(TODO)
   managerNote  String?
   completedAt  DateTime?
+  /// A follow-up task points back at the one it came out of.
+  parentTaskId String?
+  parentTask   StaffTask?      @relation("TaskFollowUp", fields: [parentTaskId], references: [id], onDelete: SetNull)
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
 
-  files StaffTaskFile[]
+  files     StaffTaskFile[]
+  comments  StaffTaskComment[]
+  reminders Reminder[]
+  followUps StaffTask[]        @relation("TaskFollowUp")
 
   @@index([assignedToId, status])
   @@index([dueAt])
+  @@index([parentTaskId])
+  @@index([title])
+}
+
+/// Back-and-forth between the manager and whoever is doing the task.
+model StaffTaskComment {
+  id        String    @id @default(cuid())
+  taskId    String
+  task      StaffTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User      @relation(fields: [authorId], references: [id])
+  body      String
+  createdAt DateTime  @default(now())
+
+  @@index([taskId, createdAt])
 }
 
 model StaffTaskFile {
@@ -635,6 +683,46 @@ model TestSitting {
   @@index([seatId, status])
   @@index([leadId])
   @@index([status])
+}
+
+// ---------- background: olympiads, certificates, prior exam results ----------
+
+/// Hangs off a lead OR a student. On conversion the rows are re-pointed at the
+/// student profile, so a candidate's record follows them into the academy.
+model Achievement {
+  id          String              @id @default(cuid())
+  leadId      String?
+  lead        Lead?               @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  studentId   String?
+  student     StudentProfile?     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  title       String
+  category    AchievementCategory @default(OTHER)
+  result      String? // "2nd place", "IELTS 7.5", "Gold medal"
+  achievedOn  DateTime?
+  note        String?
+  createdById String
+  createdBy   User                @relation(fields: [createdById], references: [id])
+  createdAt   DateTime            @default(now())
+
+  @@index([leadId])
+  @@index([studentId])
+}
+
+// ---------- internal messages between staff ----------
+
+model Message {
+  id          String    @id @default(cuid())
+  senderId    String
+  sender      User      @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  recipientId String
+  recipient   User      @relation("MessageRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  body        String
+  readAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([recipientId, readAt])
+  @@index([senderId, recipientId, createdAt])
+  @@index([recipientId, senderId, createdAt])
 }
 
 // ---------- public website content, edited from inside the portal ----------

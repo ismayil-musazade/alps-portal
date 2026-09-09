@@ -1,27 +1,12 @@
 import type { Role } from "@prisma/client";
 import { db } from "@/lib/db";
 import { can } from "@/lib/permissions";
+import { taskFolder } from "@/lib/uploads";
 
-/** Vercel caps a serverless request body at ~4.5 MB, so the file must fit in one. */
-export const MAX_FILE_BYTES = 4 * 1024 * 1024;
-export const MAX_FILE_LABEL = "4 MB";
-
-/** Office documents and images. Executables and scripts are deliberately absent. */
-export const ALLOWED_TYPES = [
-  "application/pdf",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "application/vnd.ms-excel",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  "application/vnd.ms-powerpoint",
-  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-  "text/plain",
-  "text/csv",
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/heic",
-];
+export {
+  MAX_FILE_BYTES, MAX_FILE_LABEL, MULTIPART_ABOVE_BYTES, DIRECT_POST_LIMIT_BYTES,
+  ALLOWED_TYPES, taskFolder, safeName, humanSize,
+} from "@/lib/uploads";
 
 export const TASK_STATUS_TONE: Record<string, "brand" | "ok" | "warn" | "risk" | "muted"> = {
   TODO: "muted",
@@ -51,6 +36,31 @@ export function allowedStatuses(user: { id: string; role: Role }, assignedToId: 
   return user.id === assignedToId ? ["TODO", "IN_PROGRESS", "SUBMITTED"] : [];
 }
 
+/**
+ * May this person put a file into this task's folder?
+ *
+ * Kept out of the token route so it can be exercised on its own: the storage
+ * library resolves its credentials before it hands control to the callback, so
+ * a test running without storage credentials would otherwise never reach these
+ * checks and would pass on the wrong error.
+ */
+export async function uploadRefusal(
+  user: { id: string; role: Role } | null,
+  taskId: string,
+  pathname: string,
+): Promise<string | null> {
+  if (!user || !can(user.role, "stafftasks.own")) return "Not allowed";
+
+  const task = await db.staffTask.findFirst({
+    where: { id: taskId, ...staffTaskFilter(user) },
+    select: { id: true, assignedToId: true },
+  });
+  if (!task) return "Not found";
+  if (!can(user.role, "stafftasks.assign") && task.assignedToId !== user.id) return "Not your task";
+  if (!pathname.startsWith(taskFolder(task.id))) return "Wrong folder";
+  return null;
+}
+
 /** Load a task the caller is allowed to see, or null. */
 export async function loadTask(user: { id: string; role: Role }, id: string) {
   return db.staffTask.findFirst({
@@ -62,12 +72,19 @@ export async function loadTask(user: { id: string; role: Role }, id: string) {
         orderBy: { createdAt: "desc" },
         include: { uploadedBy: { select: { name: true } } },
       },
+      comments: {
+        orderBy: { createdAt: "asc" },
+        include: { author: { select: { name: true, role: true } } },
+      },
+      parentTask: { select: { id: true, title: true, status: true } },
+      followUps: {
+        orderBy: { createdAt: "asc" },
+        select: {
+          id: true, title: true, status: true, dueAt: true,
+          assignedTo: { select: { name: true } },
+        },
+      },
     },
   });
 }
 
-export function humanSize(bytes: number) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}

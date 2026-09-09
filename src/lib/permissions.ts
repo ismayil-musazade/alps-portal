@@ -20,6 +20,7 @@ export type Capability =
   | "reminders.use" | "reminders.assign.others"
   | "stafftasks.assign" | "stafftasks.own"
   | "tests.manage" | "tests.take"
+  | "messages.use"
   | "website.edit";
 
 const matrix: Record<Role, Capability[]> = {
@@ -31,7 +32,7 @@ const matrix: Record<Role, Capability[]> = {
     "notes.internal.view", "notes.internal.edit",
     "reminders.use", "reminders.assign.others",
     "stafftasks.assign", "stafftasks.own",
-    "tests.manage", "website.edit",
+    "tests.manage", "messages.use", "website.edit",
   ],
   STAFF: [
     "groups.view",
@@ -40,14 +41,14 @@ const matrix: Record<Role, Capability[]> = {
     "academics.view", "reports.view",
     "notes.internal.view", "notes.internal.edit",
     "reminders.use", "stafftasks.own",
-    "tests.manage", "website.edit",
+    "tests.manage", "messages.use", "website.edit",
   ],
   TEACHER: [
     "students.view.assigned",
     "academics.edit", "academics.view",
     "attendance.mark", "reports.edit", "reports.view",
     "notes.internal.view", "notes.internal.edit",
-    "reminders.use", "stafftasks.own",
+    "reminders.use", "stafftasks.own", "messages.use",
   ],
   STUDENT: ["students.view.own", "academics.view", "reports.view", "tests.take"],
   PARENT: ["students.view.child", "academics.view", "reports.view"],

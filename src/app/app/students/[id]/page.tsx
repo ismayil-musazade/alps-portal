@@ -11,6 +11,7 @@ import { AssignTasksPanel, TasksTable, SkillsPanel, type TaskDTO } from "@/compo
 import { ExamForm, DeleteExamButton } from "@/components/exam-controls";
 import { NewReportCardForm, ReportCardEditor } from "@/components/report-card-controls";
 import { RemindersPanel } from "@/components/reminders-panel";
+import { AchievementsPanel } from "@/components/achievements-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -195,6 +196,9 @@ export default async function StudentProfile({
               <Row label="Weaknesses" value={student.weaknesses} />
               <Row label="Learning notes" value={student.learningNotes} />
             </Card>
+            <div className="md:col-span-2">
+              <AchievementsPanel studentId={student.id} canEdit={isInternalRole(user.role)} />
+            </div>
           </div>
         )}
 

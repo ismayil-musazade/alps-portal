@@ -33,6 +33,12 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
         startDate: new Date(),
       },
     });
+    // the record follows the person: what they achieved as a candidate is still
+    // theirs once they are a student
+    await tx.achievement.updateMany({
+      where: { leadId: lead.id },
+      data: { leadId: null, studentId: s.id },
+    });
     await tx.lead.update({ where: { id: lead.id }, data: { status: "CONVERTED" } });
     await tx.leadActivity.create({
       data: { leadId: lead.id, authorId: gate.id, type: "STATUS_CHANGE", body: "Converted to student." },

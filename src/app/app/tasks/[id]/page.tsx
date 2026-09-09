@@ -1,15 +1,17 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { db } from "@/lib/db";
 import { currentUser } from "@/lib/session";
 import { can } from "@/lib/permissions";
 import { StatusBadge } from "@/components/ui";
 import {
-  StatusPicker, FileUpload, FileReview, DeleteFileButton, DeleteTaskButton, ManagerNote,
+  StatusPicker, FileUpload, FileReview, DeleteFileButton, DeleteTaskButton,
+  ManagerNote, TaskComments, NewTaskForm,
 } from "@/components/staff-task-controls";
 import {
-  loadTask, allowedStatuses, humanSize, MAX_FILE_LABEL,
-  TASK_STATUS_TONE, FILE_STATUS_TONE,
+  loadTask, allowedStatuses, humanSize, TASK_STATUS_TONE, FILE_STATUS_TONE,
 } from "@/lib/staff-tasks";
+import { formatDate, formatDateTime } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
 
@@ -25,10 +27,15 @@ export default async function TaskDetail({ params }: { params: Promise<{ id: str
   const isManager = can(user.role, "stafftasks.assign");
   const isAssignee = task.assignedToId === user.id;
   const statuses = allowedStatuses(user, task.assignedToId);
+  const overdue = task.dueAt && task.dueAt.getTime() < Date.now() && task.status !== "APPROVED";
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const overdue = task.dueAt && task.dueAt < today && task.status !== "APPROVED";
+  const staff = isManager
+    ? await db.user.findMany({
+        where: { status: "ACTIVE", role: { in: ["MANAGER", "STAFF", "TEACHER"] } },
+        select: { id: true, name: true, role: true },
+        orderBy: { name: "asc" },
+      })
+    : [];
 
   return (
     <>
@@ -41,6 +48,15 @@ export default async function TaskDetail({ params }: { params: Promise<{ id: str
           {isManager && <DeleteTaskButton taskId={task.id} />}
         </div>
       </div>
+
+      {task.parentTask && (
+        <p className="mt-2 text-sm text-ink/50">
+          Follow-up to{" "}
+          <Link href={`/app/tasks/${task.parentTask.id}`} className="font-semibold text-brand hover:underline">
+            {task.parentTask.title}
+          </Link>
+        </p>
+      )}
 
       <div className="mt-5 grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
@@ -56,7 +72,7 @@ export default async function TaskDetail({ params }: { params: Promise<{ id: str
               <h3 className="text-sm font-bold uppercase tracking-wide text-ink/50">
                 Files <span className="text-ink/30">({task.files.length})</span>
               </h3>
-              {(isManager || isAssignee) && <FileUpload taskId={task.id} maxLabel={MAX_FILE_LABEL} />}
+              {(isManager || isAssignee) && <FileUpload taskId={task.id} />}
             </div>
 
             <ul className="space-y-2">
@@ -78,8 +94,7 @@ export default async function TaskDetail({ params }: { params: Promise<{ id: str
                           <StatusBadge value={f.status} tone={FILE_STATUS_TONE[f.status]} />
                         </div>
                         <p className="mt-0.5 text-xs text-ink/40">
-                          {humanSize(f.size)} · {f.uploadedBy.name} ·{" "}
-                          {f.createdAt.toLocaleString("en-GB", { dateStyle: "short", timeStyle: "short" })}
+                          {humanSize(f.size)} · {f.uploadedBy.name} · {formatDateTime(f.createdAt)}
                         </p>
                         {f.reviewNote && (
                           <p className="mt-1 rounded bg-white px-2 py-1 text-sm text-ink/70">
@@ -100,6 +115,31 @@ export default async function TaskDetail({ params }: { params: Promise<{ id: str
           </div>
 
           <div className="rounded-xl border border-black/10 bg-white p-4">
+            <h3 className="mb-2 text-sm font-bold uppercase tracking-wide text-ink/50">
+              Conversation <span className="text-ink/30">({task.comments.length})</span>
+            </h3>
+            <ul className="space-y-2">
+              {task.comments.map((c) => (
+                <li
+                  key={c.id}
+                  className={`rounded-lg px-3 py-2 text-sm ${
+                    c.authorId === user.id ? "bg-brand-tint/50" : "bg-paper"
+                  }`}
+                >
+                  <p className="whitespace-pre-line text-ink/80">{c.body}</p>
+                  <p className="mt-0.5 text-xs text-ink/40">
+                    {c.author.name} · {c.author.role.toLowerCase()} · {formatDateTime(c.createdAt)}
+                  </p>
+                </li>
+              ))}
+              {!task.comments.length && (
+                <li className="py-3 text-center text-sm text-ink/40">Nothing said yet.</li>
+              )}
+            </ul>
+            <TaskComments taskId={task.id} />
+          </div>
+
+          <div className="rounded-xl border border-black/10 bg-white p-4">
             <h3 className="mb-2 text-sm font-bold uppercase tracking-wide text-ink/50">Manager&rsquo;s note</h3>
             {isManager ? (
               <ManagerNote taskId={task.id} value={task.managerNote ?? ""} />
@@ -111,25 +151,63 @@ export default async function TaskDetail({ params }: { params: Promise<{ id: str
           </div>
         </div>
 
-        <div className="rounded-xl border border-black/10 bg-white p-4 text-sm">
-          <h3 className="mb-2 text-sm font-bold uppercase tracking-wide text-ink/50">About</h3>
-          {[
-            ["Assigned to", task.assignedTo.name],
-            ["Set by", task.createdBy.name],
-            ["Deadline", task.dueAt ? task.dueAt.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }) : "—"],
-            ["Created", task.createdAt.toLocaleDateString("en-GB")],
-            ["Completed", task.completedAt?.toLocaleDateString("en-GB") ?? "—"],
-          ].map(([label, value]) => (
-            <div key={label} className="flex justify-between gap-4 border-b border-dashed border-black/5 py-1.5 last:border-0">
-              <span className="text-ink/50">{label}</span>
-              <span className={`text-right font-medium ${label === "Deadline" && overdue ? "text-risk" : ""}`}>
-                {value}
-              </span>
-            </div>
-          ))}
-          {overdue && (
-            <p className="mt-2 rounded-lg bg-risk/10 px-3 py-2 text-xs font-bold text-risk">Past its deadline</p>
-          )}
+        <div className="space-y-4">
+          <div className="rounded-xl border border-black/10 bg-white p-4 text-sm">
+            <h3 className="mb-2 text-sm font-bold uppercase tracking-wide text-ink/50">About</h3>
+            {[
+              ["Assigned to", task.assignedTo.name],
+              ["Set by", task.createdBy.name],
+              ["Deadline", task.dueAt ? formatDateTime(task.dueAt, { weekday: "short", day: "numeric", month: "short" }) : "—"],
+              ["Created", formatDate(task.createdAt, { day: "numeric", month: "short", year: "numeric" })],
+              ["Completed", task.completedAt ? formatDate(task.completedAt, { day: "numeric", month: "short", year: "numeric" }) : "—"],
+            ].map(([label, value]) => (
+              <div key={label} className="flex justify-between gap-4 border-b border-dashed border-black/5 py-1.5 last:border-0">
+                <span className="text-ink/50">{label}</span>
+                <span className={`text-right font-medium ${label === "Deadline" && overdue ? "text-risk" : ""}`}>
+                  {value}
+                </span>
+              </div>
+            ))}
+            {overdue && (
+              <p className="mt-2 rounded-lg bg-risk/10 px-3 py-2 text-xs font-bold text-risk">Past its deadline</p>
+            )}
+          </div>
+
+          <div className="rounded-xl border border-black/10 bg-white p-4">
+            <h3 className="mb-2 text-sm font-bold uppercase tracking-wide text-ink/50">
+              Follow-up tasks <span className="text-ink/30">({task.followUps.length})</span>
+            </h3>
+            <ul className="space-y-1.5">
+              {task.followUps.map((f) => (
+                <li key={f.id}>
+                  <Link
+                    href={`/app/tasks/${f.id}`}
+                    className="flex flex-wrap items-center gap-2 rounded-lg bg-paper px-3 py-2 text-sm hover:bg-black/5"
+                  >
+                    <span className="min-w-0 flex-1 font-semibold">{f.title}</span>
+                    <StatusBadge value={f.status} tone={TASK_STATUS_TONE[f.status]} />
+                  </Link>
+                  <p className="px-3 text-xs text-ink/40">
+                    {f.assignedTo.name}
+                    {f.dueAt ? ` · due ${formatDateTime(f.dueAt)}` : ""}
+                  </p>
+                </li>
+              ))}
+              {!task.followUps.length && (
+                <li className="py-2 text-sm text-ink/40">None yet.</li>
+              )}
+            </ul>
+            {isManager && (
+              <div className="mt-3">
+                <NewTaskForm
+                  staff={staff}
+                  parentTaskId={task.id}
+                  defaultAssignedToId={task.assignedToId}
+                  label="+ Assign a follow-up"
+                />
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </>

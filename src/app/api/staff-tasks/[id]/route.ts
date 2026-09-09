@@ -4,6 +4,8 @@ import { db } from "@/lib/db";
 import { requireCapability } from "@/lib/authz";
 import { can } from "@/lib/permissions";
 import { StaffTaskUpdateSchema } from "@/lib/schemas";
+import { parseInstant } from "@/lib/time";
+import { syncStaffTaskReminder, DEFAULT_REMINDER_HOUR } from "@/lib/reminders";
 import { allowedStatuses, staffTaskFilter } from "@/lib/staff-tasks";
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -43,10 +45,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (d.dueAt !== undefined) {
       if (!d.dueAt) data.dueAt = null;
       else {
-        const due = new Date(d.dueAt);
-        if (Number.isNaN(due.getTime())) {
-          return NextResponse.json({ error: "Invalid deadline" }, { status: 400 });
-        }
+        const due = parseInstant(d.dueAt, DEFAULT_REMINDER_HOUR);
+        if (!due) return NextResponse.json({ error: "Invalid deadline" }, { status: 400 });
         data.dueAt = due;
       }
     }
@@ -62,7 +62,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     data.completedAt = d.status === "APPROVED" ? new Date() : null;
   }
 
-  await db.staffTask.update({ where: { id }, data });
+  const updated = await db.staffTask.update({ where: { id }, data });
+
+  // the deadline, the owner and "is it finished" all move the bell with them
+  await syncStaffTaskReminder(updated, gate.id);
+
   return NextResponse.json({ ok: true });
 }
 

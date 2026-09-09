@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireCapability } from "@/lib/authz";
 import { StaffTaskCreateSchema } from "@/lib/schemas";
+import { parseInstant } from "@/lib/time";
+import { syncStaffTaskReminder, DEFAULT_REMINDER_HOUR } from "@/lib/reminders";
 
 /** Manager assigns a task to a member of staff. */
 export async function POST(req: NextRequest) {
@@ -25,10 +27,17 @@ export async function POST(req: NextRequest) {
 
   let dueAt: Date | null = null;
   if (d.dueAt) {
-    dueAt = new Date(d.dueAt);
-    if (Number.isNaN(dueAt.getTime())) {
-      return NextResponse.json({ error: "Invalid deadline" }, { status: 400 });
-    }
+    dueAt = parseInstant(d.dueAt, DEFAULT_REMINDER_HOUR);
+    if (!dueAt) return NextResponse.json({ error: "Invalid deadline" }, { status: 400 });
+  }
+
+  // a follow-up task hangs off the one it came out of
+  if (d.parentTaskId) {
+    const parent = await db.staffTask.findUnique({
+      where: { id: d.parentTaskId },
+      select: { id: true },
+    });
+    if (!parent) return NextResponse.json({ error: "Unknown parent task" }, { status: 400 });
   }
 
   const task = await db.staffTask.create({
@@ -37,8 +46,12 @@ export async function POST(req: NextRequest) {
       description: d.description || null,
       assignedToId: d.assignedToId,
       createdById: gate.id,
+      parentTaskId: d.parentTaskId || null,
       dueAt,
     },
   });
+
+  await syncStaffTaskReminder(task, gate.id);
+
   return NextResponse.json({ ok: true, id: task.id });
 }

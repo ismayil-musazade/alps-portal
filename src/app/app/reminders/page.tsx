@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { currentUser } from "@/lib/session";
 import { can } from "@/lib/permissions";
 import { dueTone, dueLabel, startOfToday } from "@/lib/reminders";
+import { formatDateTime } from "@/lib/time";
 import { AddReminder, ReminderActions, BellIcon } from "@/components/reminder-controls";
 
 export const dynamic = "force-dynamic";
@@ -70,7 +71,7 @@ function Group({ title, rows, hint }: { title: string; rows: Row[]; hint?: strin
                 </div>
                 {r.body && <p className="mt-0.5 text-ink/70">{r.body}</p>}
                 <p className="mt-0.5 text-xs text-ink/40">
-                  {r.dueAt.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}
+                  {formatDateTime(r.dueAt, { weekday: "short", day: "numeric", month: "short" })}
                   {" · set by "}{r.createdBy.name}
                 </p>
               </div>

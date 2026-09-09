@@ -40,11 +40,15 @@ export function AppNav({
   name,
   dueCount = 0,
   showBell = false,
+  unreadCount = 0,
+  showInbox = false,
 }: {
   role: Role;
   name: string;
   dueCount?: number;
   showBell?: boolean;
+  unreadCount?: number;
+  showInbox?: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -85,6 +89,26 @@ export function AppNav({
         </nav>
 
         <div className="ml-auto flex shrink-0 items-center gap-2">
+          {showInbox && (
+            <Link
+              href="/app/messages"
+              aria-label={unreadCount ? `Messages — ${unreadCount} unread` : "Messages"}
+              title={unreadCount ? `${unreadCount} unread message${unreadCount === 1 ? "" : "s"}` : "Messages"}
+              className={`relative rounded-full p-1.5 hover:bg-black/5 ${
+                pathname.startsWith("/app/messages") ? "bg-brand-tint text-brand-dark" : "text-ink/60"
+              }`}
+            >
+              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="2.5" y="5" width="19" height="14" rx="2" />
+                <path d="m3 6.5 9 6 9-6" />
+              </svg>
+              {unreadCount > 0 && (
+                <span className="absolute -right-0.5 -top-0.5 min-w-[17px] rounded-full bg-brand px-1 text-center text-[10px] font-bold leading-[17px] text-white">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
+            </Link>
+          )}
           {showBell && (
             <Link
               href="/app/reminders"

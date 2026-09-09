@@ -2,16 +2,37 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { upload } from "@vercel/blob/client";
 import { inputCls, inputBase } from "@/components/ui";
+import {
+  DIRECT_POST_LIMIT_BYTES, MULTIPART_ABOVE_BYTES, MAX_FILE_BYTES, MAX_FILE_LABEL,
+  humanSize, safeName, taskFolder,
+} from "@/lib/uploads";
 
 type Staff = { id: string; name: string; role: string };
 
-/** Manager: assign a new task. */
-export function NewTaskForm({ staff }: { staff: Staff[] }) {
+/**
+ * Manager: assign a new task.
+ *
+ * `parentTaskId` turns this into a follow-up — the task that comes out of
+ * another one, which is how most work actually goes: hand it in, get a note
+ * back, do the next round.
+ */
+export function NewTaskForm({
+  staff,
+  parentTaskId,
+  defaultAssignedToId,
+  label = "+ New task",
+}: {
+  staff: Staff[];
+  parentTaskId?: string;
+  defaultAssignedToId?: string;
+  label?: string;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
-  const [assignedToId, setAssignedToId] = useState(staff[0]?.id ?? "");
+  const [assignedToId, setAssignedToId] = useState(defaultAssignedToId ?? staff[0]?.id ?? "");
   const [dueAt, setDueAt] = useState("");
   const [description, setDescription] = useState("");
   const [busy, setBusy] = useState(false);
@@ -24,7 +45,7 @@ export function NewTaskForm({ staff }: { staff: Staff[] }) {
     const res = await fetch("/api/staff-tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, assignedToId, dueAt, description }),
+      body: JSON.stringify({ title, assignedToId, dueAt, description, parentTaskId }),
     });
     if (res.ok) {
       setTitle(""); setDueAt(""); setDescription(""); setOpen(false);
@@ -39,9 +60,13 @@ export function NewTaskForm({ staff }: { staff: Staff[] }) {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="rounded-full bg-brand px-4 py-1.5 text-sm font-semibold text-white hover:bg-brand-dark"
+        className={
+          parentTaskId
+            ? "rounded-full border border-brand/40 px-4 py-1.5 text-sm font-semibold text-brand hover:bg-brand-tint"
+            : "rounded-full bg-brand px-4 py-1.5 text-sm font-semibold text-white hover:bg-brand-dark"
+        }
       >
-        + New task
+        {label}
       </button>
     );
   }
@@ -59,8 +84,8 @@ export function NewTaskForm({ staff }: { staff: Staff[] }) {
           ))}
         </select>
         <input
-          type="date" value={dueAt} onChange={(e) => setDueAt(e.target.value)}
-          className={`${inputBase} min-w-0 flex-1`} title="Deadline"
+          type="datetime-local" value={dueAt} onChange={(e) => setDueAt(e.target.value)}
+          className={`${inputBase} min-w-0 flex-1`} title="Deadline (date and time)"
         />
       </div>
       <textarea
@@ -70,7 +95,7 @@ export function NewTaskForm({ staff }: { staff: Staff[] }) {
       {error && <p className="rounded-lg bg-white px-3 py-2 text-sm text-brand-dark">{error}</p>}
       <div className="flex gap-2">
         <button disabled={busy} className="rounded-full bg-brand px-4 py-1.5 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-40">
-          {busy ? "Assigning…" : "Assign task"}
+          {busy ? "Assigning…" : parentTaskId ? "Assign follow-up" : "Assign task"}
         </button>
         <button type="button" onClick={() => setOpen(false)} className="rounded-full border border-black/15 px-4 py-1.5 text-sm font-semibold hover:bg-black/5">
           Cancel
@@ -110,23 +135,84 @@ export function StatusPicker({ taskId, status, options }: { taskId: string; stat
   );
 }
 
-/** Upload a file against the task. */
-export function FileUpload({ taskId, maxLabel }: { taskId: string; maxLabel: string }) {
+/**
+ * Upload a file against the task.
+ *
+ * The file goes from the browser straight to storage, which is the only way to
+ * carry anything bigger than about 4.5 MB — a file routed through a serverless
+ * function has to fit inside one request body. The server hands out a token
+ * scoped to this task, then confirms with storage before recording the file.
+ *
+ * If that route is unavailable for any reason, a small file still falls back to
+ * the original path through the server, so a hand-in is never simply lost.
+ */
+export function FileUpload({ taskId }: { taskId: string }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
+  const [pct, setPct] = useState(0);
   const [error, setError] = useState("");
 
-  async function send(file: File) {
-    setBusy(true);
-    setError("");
+  function reset() {
+    if (inputRef.current) inputRef.current.value = "";
+    setBusy(false);
+    setPct(0);
+  }
+
+  async function throughServer(file: File) {
     const body = new FormData();
     body.append("file", file);
     const res = await fetch(`/api/staff-tasks/${taskId}/files`, { method: "POST", body });
-    if (res.ok) router.refresh();
-    else setError((await res.json().catch(() => ({}))).error ?? "Upload failed");
-    if (inputRef.current) inputRef.current.value = "";
-    setBusy(false);
+    if (!res.ok) {
+      throw new Error((await res.json().catch(() => ({}))).error ?? "Upload failed");
+    }
+  }
+
+  async function send(file: File) {
+    setError("");
+    if (file.size > MAX_FILE_BYTES) {
+      setError(`${humanSize(file.size)} is too big — the limit is ${MAX_FILE_LABEL}.`);
+      reset();
+      return;
+    }
+
+    setBusy(true);
+    setPct(0);
+    try {
+      const blob = await upload(`${taskFolder(taskId)}${safeName(file.name)}`, file, {
+        access: "private",
+        handleUploadUrl: `/api/staff-tasks/${taskId}/blob-token`,
+        contentType: file.type || undefined,
+        multipart: file.size > MULTIPART_ABOVE_BYTES,
+        onUploadProgress: (p) => setPct(Math.round(p.percentage)),
+      });
+
+      // storage has it; now the server checks it and writes the row
+      const res = await fetch(`/api/staff-tasks/${taskId}/files`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: blob.url, filename: file.name }),
+      });
+      if (!res.ok) {
+        throw new Error((await res.json().catch(() => ({}))).error ?? "Could not record the file");
+      }
+      router.refresh();
+    } catch (directError) {
+      if (file.size <= DIRECT_POST_LIMIT_BYTES) {
+        try {
+          await throughServer(file);
+          router.refresh();
+          reset();
+          return;
+        } catch (fallbackError) {
+          setError(fallbackError instanceof Error ? fallbackError.message : "Upload failed");
+          reset();
+          return;
+        }
+      }
+      setError(directError instanceof Error ? directError.message : "Upload failed");
+    }
+    reset();
   }
 
   return (
@@ -136,15 +222,65 @@ export function FileUpload({ taskId, maxLabel }: { taskId: string; maxLabel: str
           <path d="M12 16V4m0 0L7 9m5-5 5 5" />
           <path d="M4 17v2a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-2" />
         </svg>
-        {busy ? "Uploading…" : "Upload file"}
+        {busy ? (pct > 0 && pct < 100 ? `Uploading ${pct}%` : "Uploading…") : "Upload file"}
         <input
           ref={inputRef} type="file" className="hidden" disabled={busy}
           onChange={(e) => { const f = e.target.files?.[0]; if (f) send(f); }}
         />
       </label>
-      <p className="mt-1 text-xs text-ink/40">Documents, spreadsheets, PDFs or images, up to {maxLabel} each.</p>
+      {busy && (
+        <div className="mt-1.5 h-1 w-40 overflow-hidden rounded-full bg-black/10">
+          <div className="h-full rounded-full bg-brand transition-all" style={{ width: `${pct}%` }} />
+        </div>
+      )}
+      <p className="mt-1 text-xs text-ink/40">
+        Documents, spreadsheets, PDFs, images, zips or video, up to {MAX_FILE_LABEL} each.
+      </p>
       {error && <p className="mt-1 rounded-lg bg-brand-tint px-3 py-2 text-sm text-brand-dark">{error}</p>}
     </div>
+  );
+}
+
+/** The conversation on a task — the manager and the assignee talking it over. */
+export function TaskComments({ taskId }: { taskId: string }) {
+  const router = useRouter();
+  const [body, setBody] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function send(e: React.FormEvent) {
+    e.preventDefault();
+    if (!body.trim()) return;
+    setBusy(true);
+    setError("");
+    const res = await fetch(`/api/staff-tasks/${taskId}/comments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body }),
+    });
+    if (res.ok) {
+      setBody("");
+      router.refresh();
+    } else {
+      setError((await res.json().catch(() => ({}))).error ?? "Could not send");
+    }
+    setBusy(false);
+  }
+
+  return (
+    <form onSubmit={send} className="mt-3">
+      <textarea
+        rows={2} value={body} onChange={(e) => setBody(e.target.value)}
+        placeholder="Ask a question or leave a comment…" className={inputCls}
+      />
+      {error && <p className="mt-1 text-sm text-brand-dark">{error}</p>}
+      <button
+        disabled={busy || !body.trim()}
+        className="mt-2 rounded-full bg-ink px-4 py-1.5 text-sm font-semibold text-white hover:bg-black disabled:opacity-40"
+      >
+        {busy ? "Sending…" : "Comment"}
+      </button>
+    </form>
   );
 }
 

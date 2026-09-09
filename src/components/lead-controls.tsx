@@ -62,7 +62,15 @@ export function LeadControls({
         />
       )}
       <label className="mb-1 mt-3 block text-sm font-semibold">Next follow-up</label>
-      <input type="date" value={followUp} onChange={(e) => setFollowUp(e.target.value)} className={inputCls} />
+      <input
+        type="datetime-local"
+        value={followUp}
+        onChange={(e) => setFollowUp(e.target.value)}
+        className={inputCls}
+      />
+      <p className="mt-1 text-xs text-ink/40">
+        Saving this puts a reminder on the bell of whoever is responsible for this lead.
+      </p>
       <label className="mb-1 mt-2 block text-sm font-semibold">
         Why <span className="font-normal text-ink/40">— what this follow-up is for</span>
       </label>

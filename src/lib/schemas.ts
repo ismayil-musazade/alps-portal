@@ -56,6 +56,32 @@ export const StaffTaskCreateSchema = z.object({
   description: z.string().trim().max(4000).optional().or(z.literal("")),
   assignedToId: z.string().trim().min(1),
   dueAt: z.string().optional().or(z.literal("")),
+  parentTaskId: z.string().trim().optional().or(z.literal("")),
+}).strict();
+
+export const TaskCommentSchema = z.object({
+  body: z.string().trim().min(1).max(2000),
+}).strict();
+
+/** The browser reports where it put the file; the server checks with storage. */
+export const FileConfirmSchema = z.object({
+  url: z.string().url().max(600),
+  filename: z.string().trim().min(1).max(200),
+}).strict();
+
+export const AchievementCreateSchema = z.object({
+  title: z.string().trim().min(2).max(200),
+  category: z.enum(["OLYMPIAD", "EXAM", "CERTIFICATE", "COMPETITION", "AWARD", "OTHER"]),
+  result: z.string().trim().max(120).optional().or(z.literal("")),
+  achievedOn: z.string().optional().or(z.literal("")),
+  note: z.string().trim().max(1000).optional().or(z.literal("")),
+  leadId: z.string().trim().optional().or(z.literal("")),
+  studentId: z.string().trim().optional().or(z.literal("")),
+}).strict();
+
+export const MessageCreateSchema = z.object({
+  recipientId: z.string().trim().min(1),
+  body: z.string().trim().min(1).max(4000),
 }).strict();
 
 export const StaffTaskUpdateSchema = z.object({

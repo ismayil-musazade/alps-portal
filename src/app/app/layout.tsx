@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { AppNav } from "@/components/nav";
 import { can } from "@/lib/permissions";
 import { dueReminderCount } from "@/lib/reminders";
+import { unreadMessageCount } from "@/lib/messages";
 
 export default async function AppLayout({
   children,
@@ -21,11 +22,22 @@ export default async function AppLayout({
   if (!record || record.status !== "ACTIVE") redirect("/login");
 
   const showBell = can(user.role, "reminders.use");
-  const dueCount = showBell ? await dueReminderCount(user.id) : 0;
+  const showInbox = can(user.role, "messages.use");
+  const [dueCount, unreadCount] = await Promise.all([
+    showBell ? dueReminderCount(user.id) : 0,
+    showInbox ? unreadMessageCount(user.id) : 0,
+  ]);
 
   return (
     <div className="min-h-screen">
-      <AppNav role={user.role} name={user.name} dueCount={dueCount} showBell={showBell} />
+      <AppNav
+        role={user.role}
+        name={user.name}
+        dueCount={dueCount}
+        showBell={showBell}
+        unreadCount={unreadCount}
+        showInbox={showInbox}
+      />
       <main className="mx-auto max-w-6xl px-4 py-6">{children}</main>
     </div>
   );

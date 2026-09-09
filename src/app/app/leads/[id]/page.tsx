@@ -7,6 +7,8 @@ import { StatusBadge, LEAD_STATUS_TONE } from "@/components/ui";
 import { LeadControls, ActivityBox } from "@/components/lead-controls";
 import { ConvertButton } from "@/components/student-controls";
 import { RemindersPanel } from "@/components/reminders-panel";
+import { AchievementsPanel } from "@/components/achievements-panel";
+import { toDateTimeInput, formatDateTime } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
 
@@ -114,7 +116,7 @@ export default async function LeadDetail({ params }: { params: Promise<{ id: str
             <LeadControls
               leadId={lead.id}
               status={lead.status}
-              nextFollowUpAt={lead.nextFollowUpAt?.toISOString().slice(0, 10) ?? ""}
+              nextFollowUpAt={lead.nextFollowUpAt ? toDateTimeInput(lead.nextFollowUpAt) : ""}
               followUpNote={lead.followUpNote ?? ""}
             />
           )}
@@ -122,7 +124,7 @@ export default async function LeadDetail({ params }: { params: Promise<{ id: str
             <h3 className="mb-2 text-sm font-bold uppercase tracking-wide text-ink/50">Timeline</h3>
             <Row label="Created" value={lead.createdAt.toLocaleDateString("en-GB")} />
             <Row label="First contact" value={lead.firstContactAt?.toLocaleDateString("en-GB")} />
-            <Row label="Next follow-up" value={lead.nextFollowUpAt?.toLocaleDateString("en-GB")} />
+            <Row label="Next follow-up" value={lead.nextFollowUpAt ? formatDateTime(lead.nextFollowUpAt) : undefined} />
             {lead.followUpNote && (
               <div className="mt-2 rounded-lg bg-brand-tint/50 px-3 py-2">
                 <span className="block text-xs font-bold uppercase tracking-wide text-brand-dark/60">
@@ -136,6 +138,8 @@ export default async function LeadDetail({ params }: { params: Promise<{ id: str
           {can(user.role, "reminders.use") && (
             <RemindersPanel leadId={lead.id} canEdit staff={staff} />
           )}
+
+          <AchievementsPanel leadId={lead.id} canEdit={canEdit} />
         </div>
       </div>
     </>

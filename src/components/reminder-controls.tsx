@@ -72,9 +72,10 @@ export function AddReminder({
       <div className="flex gap-2">
         <input
           required
-          type="date"
+          type="datetime-local"
           value={dueAt}
           onChange={(e) => setDueAt(e.target.value)}
+          title="When to be reminded — date and time"
           className={`${inputBase} min-w-0 flex-1`}
         />
         {staff && staff.length > 0 && (

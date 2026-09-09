@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireCapability } from "@/lib/authz";
 import { ReminderUpdateSchema } from "@/lib/schemas";
+import { parseInstant } from "@/lib/time";
 
 /** You may touch a reminder only if it is on your bell or you created it. */
 async function ownedBy(userId: string, id: string) {
@@ -33,10 +34,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (d.title !== undefined) data.title = d.title;
   if (d.body !== undefined) data.body = d.body || null;
   if (d.dueAt !== undefined) {
-    const due = new Date(d.dueAt);
-    if (Number.isNaN(due.getTime())) {
-      return NextResponse.json({ error: "Invalid date" }, { status: 400 });
-    }
+    const due = parseInstant(d.dueAt);
+    if (!due) return NextResponse.json({ error: "Invalid date" }, { status: 400 });
     data.dueAt = due;
   }
   if (d.status !== undefined) {
