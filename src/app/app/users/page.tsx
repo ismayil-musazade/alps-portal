@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { currentUser } from "@/lib/session";
-import { can } from "@/lib/permissions";
+import { can, PERSON_ROLES } from "@/lib/permissions";
 import { StatusBadge } from "@/components/ui";
 import { UserForm, UserRowActions } from "@/components/user-controls";
 
@@ -13,6 +13,8 @@ export default async function UsersPage() {
 
   const [users, linkableStudents, allStudents] = await Promise.all([
     db.user.findMany({
+      // exam desks are furniture, not people — they live on their own page
+      where: { role: { in: PERSON_ROLES } },
       orderBy: [{ role: "asc" }, { name: "asc" }],
       select: { id: true, name: true, email: true, phone: true, role: true, status: true, mustChangePassword: true, createdAt: true },
     }),

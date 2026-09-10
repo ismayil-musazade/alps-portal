@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { Role } from "@prisma/client";
 import { head, put, del } from "@vercel/blob";
 import { db } from "@/lib/db";
 import { requireCapability } from "@/lib/authz";
@@ -10,7 +11,7 @@ import {
 } from "@/lib/staff-tasks";
 
 /** Resolve the task and confirm the caller is allowed to attach to it. */
-async function openTask(gate: { id: string; role: "MANAGER" | "STAFF" | "TEACHER" | "STUDENT" | "PARENT" }, id: string) {
+async function openTask(gate: { id: string; role: Role }, id: string) {
   const task = await db.staffTask.findFirst({
     where: { id, ...staffTaskFilter(gate) },
     select: { id: true, assignedToId: true, status: true },

@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/session";
 import { db } from "@/lib/db";
 import { AppNav } from "@/components/nav";
-import { can } from "@/lib/permissions";
+import { can, APP_ROLES } from "@/lib/permissions";
 import { dueReminderCount } from "@/lib/reminders";
 import { unreadMessageCount } from "@/lib/messages";
 
@@ -20,6 +20,9 @@ export default async function AppLayout({
     select: { mustChangePassword: true, status: true },
   });
   if (!record || record.status !== "ACTIVE") redirect("/login");
+
+  // a shared exam desk has no business in the app shell
+  if (!APP_ROLES.includes(user.role)) redirect("/exam");
 
   const showBell = can(user.role, "reminders.use");
   const showInbox = can(user.role, "messages.use");

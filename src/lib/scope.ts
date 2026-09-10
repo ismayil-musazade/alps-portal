@@ -34,6 +34,8 @@ export async function canAccessStudent(
       const n = await db.parentLink.count({ where: { parentUserId: user.id, studentId } });
       return n > 0;
     }
+    case "EXAM_SEAT":
+      return false;
   }
 }
 
@@ -53,6 +55,9 @@ export function studentListFilter(user: { id: string; role: Role }) {
       return { userId: user.id };
     case "PARENT":
       return { parentLinks: { some: { parentUserId: user.id } } };
+    case "EXAM_SEAT":
+      // matches nothing: a seat has no business listing students
+      return { id: "" };
   }
 }
 

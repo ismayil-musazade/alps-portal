@@ -17,6 +17,12 @@ enum Role {
   TEACHER
   STUDENT
   PARENT
+
+  /// One of the five shared walk-in exam desks — not a person. It reaches the
+  /// exam screen and nothing else, and the result belongs to the named
+  /// candidate on the sitting, never to the seat. Listed last so seats sort to
+  /// the bottom of any role-ordered list.
+  EXAM_SEAT
 }
 
 enum UserStatus {

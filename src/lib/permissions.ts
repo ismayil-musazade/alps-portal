@@ -52,11 +52,18 @@ const matrix: Record<Role, Capability[]> = {
   ],
   STUDENT: ["students.view.own", "academics.view", "reports.view", "tests.take"],
   PARENT: ["students.view.child", "academics.view", "reports.view"],
+
+  // A shared exam desk. Deliberately empty except for sitting the exam: five
+  // strangers a week use this login, so it must not reach a single record.
+  EXAM_SEAT: ["tests.take"],
 };
 
 export function can(role: Role, capability: Capability): boolean {
   return matrix[role].includes(capability);
 }
 
-/** Roles allowed into the app shell at all */
+/** Roles allowed into the app shell at all. Exam seats go to /exam instead. */
 export const APP_ROLES: Role[] = ["MANAGER", "STAFF", "TEACHER", "STUDENT", "PARENT"];
+
+/** Real people. Exam seats are furniture and are managed on their own page. */
+export const PERSON_ROLES: Role[] = ["MANAGER", "STAFF", "TEACHER", "STUDENT", "PARENT"];
