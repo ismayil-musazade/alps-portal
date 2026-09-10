@@ -642,6 +642,10 @@ model TestQuestion {
   order   Int          @default(0)
   section String? // "Grammar", "Reading", "Algebra"
   type    QuestionType @default(SINGLE_CHOICE)
+  /// The stimulus a question is asked about — a reading passage, a data table,
+  /// a scenario. Separate from the prompt because it is laid out beside the
+  /// question rather than above it, and several questions may share one.
+  passage String?
   prompt  String
   options Json? // ["A","B","C","D"] — null for SHORT_TEXT
   answer  String // option index ("0"), indexes ("0,2"), or accepted text

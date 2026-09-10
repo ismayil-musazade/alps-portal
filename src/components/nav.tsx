@@ -13,7 +13,7 @@ const NAV: Record<Role, { href: string; label: string }[]> = {
     { href: "/app/groups", label: "Courses" },
     { href: "/app/attendance", label: "Attendance" },
     { href: "/app/tasks", label: "Tasks" },
-    { href: "/app/exam-seats", label: "Exams" },
+    { href: "/app/exams", label: "Exams" },
     { href: "/app/users", label: "Users" },
   ],
   STAFF: [
