@@ -31,3 +31,37 @@ export function AddDemoPaper({ label = "Add the demo paper" }: { label?: string 
     </span>
   );
 }
+
+/** Loads the five sample questions into the Question Bank. */
+export function AddDemoBankQuestions() {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  async function add() {
+    setBusy(true);
+    setMsg("");
+    const res = await fetch("/api/bank/demo-questions", { method: "POST" });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      setMsg(data.added > 0 ? `Added ${data.added} questions.` : "Already loaded.");
+      router.refresh();
+    } else {
+      setMsg(data.error ?? "Could not load them");
+    }
+    setBusy(false);
+  }
+
+  return (
+    <span className="flex flex-wrap items-center gap-2">
+      <button
+        onClick={add}
+        disabled={busy}
+        className="rounded-full border border-black/15 px-4 py-1.5 text-sm font-semibold hover:bg-black/5 disabled:opacity-40"
+      >
+        {busy ? "Loading…" : "Load 5 sample questions"}
+      </button>
+      {msg && <span className="text-sm text-ink/50">{msg}</span>}
+    </span>
+  );
+}

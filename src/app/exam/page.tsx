@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { currentUser } from "@/lib/session";
 import { can } from "@/lib/permissions";
-import { SignOutButton } from "@/components/exam-seat-controls";
+import { SignOutButton, StartSitting } from "@/components/exam-seat-controls";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
  *
  * Deliberately bare: no navigation, no links anywhere else. The desk login is
  * shared by strangers, so the only thing it can reach is the exam in front of
- * it. Sitting the paper itself is built next.
+ * it.
  */
 export default async function ExamDeskPage() {
   const user = await currentUser();
@@ -32,9 +32,21 @@ export default async function ExamDeskPage() {
 
   const sitting = seat?.sittings[0];
 
+  // nothing running here yet — offer whatever has been published
+  const papers = sitting
+    ? []
+    : await db.testPaper.findMany({
+        where: { status: "PUBLISHED", questions: { some: {} } },
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true, title: true, durationMin: true,
+          _count: { select: { questions: true } },
+        },
+      });
+
   return (
     <main className="flex min-h-screen items-center justify-center bg-paper px-4">
-      <div className="w-full max-w-md rounded-2xl border border-black/10 bg-white p-8 text-center">
+      <div className="w-full max-w-sm rounded-2xl border border-black/10 bg-white p-8 text-center">
         <svg viewBox="0 0 100 100" className="mx-auto h-10 w-10" aria-hidden>
           <path fill="#b0322c" d="M44 6h12l40 88H70L52 54 40 78l8 2-16 14H4z" />
         </svg>
@@ -47,14 +59,25 @@ export default async function ExamDeskPage() {
             <p className="mt-1 text-sm text-ink/60">
               {sitting.paper.title} · {sitting.paper.durationMin} minutes
             </p>
-            <p className="mt-6 rounded-xl bg-brand-tint px-4 py-3 text-sm text-brand-dark">
-              The exam screen is being built. Nothing is lost — this sitting stays here.
+            <a
+              href={`/exam/sitting/${sitting.id}`}
+              className="mt-6 inline-block w-full rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-white hover:bg-brand-dark"
+            >
+              Begin
+            </a>
+            <p className="mt-2 text-xs text-ink/45">
+              The timer starts when you press this.
             </p>
           </>
         ) : (
-          <p className="mt-4 text-sm text-ink/60">
-            No exam has been set up at this desk yet. Ask the front desk to create one.
-          </p>
+          <StartSitting
+            papers={papers.map((p) => ({
+              id: p.id,
+              title: p.title,
+              durationMin: p.durationMin,
+              questions: p._count.questions,
+            }))}
+          />
         )}
 
         <div className="mt-6">

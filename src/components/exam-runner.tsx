@@ -133,6 +133,9 @@ export function ExamRunner({
           )}
         </div>
 
+        {/* The key is shown when a manager is previewing, and withheld from a
+            real candidate — a placement paper gets reused next week. */}
+        {preview && (
         <div className="mt-4 rounded-2xl border border-black/10 bg-white p-5">
           <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-ink/50">Question by question</h3>
           <ul className="space-y-1.5">
@@ -151,6 +154,13 @@ export function ExamRunner({
             ))}
           </ul>
         </div>
+        )}
+
+        {!preview && (
+          <p className="mt-4 text-center text-sm text-ink/60">
+            Thank you — your result has been sent to the front desk. You can close this now.
+          </p>
+        )}
 
         {preview && (
           <p className="mt-4 text-center text-sm text-ink/50">

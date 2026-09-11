@@ -102,6 +102,81 @@ export function ResetSeatPassword({ seatNo, busy: inUse }: { seatNo: number; bus
   );
 }
 
+/** Start an exam at this desk: pick the paper, type who is sitting it. */
+export function StartSitting({
+  papers,
+}: {
+  papers: { id: string; title: string; durationMin: number; questions: number }[];
+}) {
+  const router = useRouter();
+  const [paperId, setPaperId] = useState(papers[0]?.id ?? "");
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function start(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    const res = await fetch("/api/exam-sittings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ paperId, candidateName: name, candidatePhone: phone }),
+    });
+    if (res.ok) router.refresh();
+    else setError((await res.json().catch(() => ({}))).error ?? "Could not start");
+    setBusy(false);
+  }
+
+  if (!papers.length) {
+    return (
+      <p className="mt-4 text-sm text-ink/60">
+        No exam has been published yet. Ask the front desk to set one up.
+      </p>
+    );
+  }
+
+  const field =
+    "w-full rounded-lg border border-black/15 bg-white px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20";
+
+  return (
+    <form onSubmit={start} className="mt-5 space-y-2 text-left">
+      <label className="block text-sm font-semibold">Which exam</label>
+      <select value={paperId} onChange={(e) => setPaperId(e.target.value)} className={field}>
+        {papers.map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.title} — {p.questions} questions, {p.durationMin} min
+          </option>
+        ))}
+      </select>
+
+      <label className="block pt-1 text-sm font-semibold">Your full name</label>
+      <input
+        required autoFocus value={name} onChange={(e) => setName(e.target.value)}
+        placeholder="As it should appear on your result" className={field}
+      />
+
+      <label className="block pt-1 text-sm font-semibold">
+        Phone <span className="font-normal text-ink/40">— so we can match your record</span>
+      </label>
+      <input
+        value={phone} onChange={(e) => setPhone(e.target.value)}
+        placeholder="+994…" className={field}
+      />
+
+      {error && <p className="rounded-lg bg-brand-tint px-3 py-2 text-sm text-brand-dark">{error}</p>}
+
+      <button
+        disabled={busy || name.trim().length < 2}
+        className="mt-2 w-full rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-white hover:bg-brand-dark disabled:opacity-40"
+      >
+        {busy ? "Starting…" : "Start the exam"}
+      </button>
+    </form>
+  );
+}
+
 /** The only way off the exam desk screen. */
 export function SignOutButton() {
   const router = useRouter();

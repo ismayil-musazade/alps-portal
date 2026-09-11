@@ -21,6 +21,7 @@ export type Capability =
   | "stafftasks.assign" | "stafftasks.own"
   | "tests.manage" | "tests.take"
   | "messages.use"
+  | "bank.view" | "bank.manage"
   | "website.edit";
 
 const matrix: Record<Role, Capability[]> = {
@@ -33,6 +34,7 @@ const matrix: Record<Role, Capability[]> = {
     "reminders.use", "reminders.assign.others",
     "stafftasks.assign", "stafftasks.own",
     "tests.manage", "messages.use", "website.edit",
+    "bank.view", "bank.manage",
   ],
   STAFF: [
     "groups.view",
@@ -42,6 +44,7 @@ const matrix: Record<Role, Capability[]> = {
     "notes.internal.view", "notes.internal.edit",
     "reminders.use", "stafftasks.own",
     "tests.manage", "messages.use", "website.edit",
+    "bank.view",
   ],
   TEACHER: [
     "students.view.assigned",
@@ -49,9 +52,10 @@ const matrix: Record<Role, Capability[]> = {
     "attendance.mark", "reports.edit", "reports.view",
     "notes.internal.view", "notes.internal.edit",
     "reminders.use", "stafftasks.own", "messages.use",
+    "bank.view", "bank.manage",
   ],
-  STUDENT: ["students.view.own", "academics.view", "reports.view", "tests.take"],
-  PARENT: ["students.view.child", "academics.view", "reports.view"],
+  STUDENT: ["students.view.own", "academics.view", "reports.view", "tests.take", "bank.view"],
+  PARENT: ["students.view.child", "academics.view", "reports.view", "bank.view"],
 
   // A shared exam desk. Deliberately empty except for sitting the exam: five
   // strangers a week use this login, so it must not reach a single record.

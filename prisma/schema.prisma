@@ -173,6 +173,12 @@ enum QuestionType {
   SHORT_TEXT
 }
 
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
 enum PostStatus {
   DRAFT
   PUBLISHED
@@ -316,6 +322,8 @@ model StudentProfile {
   internalNotes InternalNote[]
   reminders     Reminder[]
   achievements  Achievement[]
+  bankAttempts  BankAttempt[]
+  bankSaved     BankSaved[]
 
   @@index([status])
   @@index([fullName])
@@ -733,6 +741,135 @@ model Message {
   @@index([recipientId, readAt])
   @@index([senderId, recipientId, createdAt])
   @@index([recipientId, senderId, createdAt])
+}
+
+// ---------- question bank: the taught curriculum and practice on it ----------
+//
+// Four levels, because that is how the SAT is actually organised and how a
+// teacher talks about it: a subject (Reading & Writing, Math) is split into
+// domains (Algebra, Craft and Structure), each domain into skills — the 19 and
+// 10 topics — and each skill is taught over one or more sessions. Questions
+// hang off a skill, and optionally off the session that introduced them, so a
+// student can practise one lesson or the whole topic.
+
+model BankSubject {
+  id         String     @id @default(cuid())
+  courseType CourseType @default(SAT)
+  name       String // "Reading & Writing"
+  slug       String     @unique // "reading-writing"
+  blurb      String?
+  accent     String? // card colour on the question bank screen
+  order      Int        @default(0)
+  createdAt  DateTime   @default(now())
+
+  domains BankDomain[]
+
+  @@index([courseType, order])
+}
+
+model BankDomain {
+  id        String      @id @default(cuid())
+  subjectId String
+  subject   BankSubject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  name      String // "Algebra"
+  order     Int         @default(0)
+
+  skills BankSkill[]
+
+  @@index([subjectId, order])
+}
+
+/// One of the 19 Math or 10 Reading & Writing topics.
+model BankSkill {
+  id          String     @id @default(cuid())
+  domainId    String
+  domain      BankDomain @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  name        String
+  slug        String
+  description String?
+  order       Int        @default(0)
+
+  sessions  BankSession[]
+  questions BankQuestion[]
+
+  @@unique([domainId, slug])
+  @@index([domainId, order])
+}
+
+/// A teaching unit inside a skill — what a teacher covers in one sitting.
+model BankSession {
+  id        String    @id @default(cuid())
+  skillId   String
+  skill     BankSkill @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  order     Int       @default(1)
+  title     String
+  objective String? // what the student should be able to do afterwards
+  notes     String? // teaching notes / what was covered
+  published Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  questions BankQuestion[]
+
+  @@unique([skillId, order])
+  @@index([skillId, order])
+}
+
+model BankQuestion {
+  id          String       @id @default(cuid())
+  skillId     String
+  skill       BankSkill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  sessionId   String?
+  session     BankSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  order       Int          @default(0)
+  difficulty  Difficulty   @default(MEDIUM)
+  type        QuestionType @default(SINGLE_CHOICE)
+  passage     String?
+  prompt      String
+  options     Json? // ["A","B","C","D"] — null for SHORT_TEXT
+  answer      String
+  explanation String? // shown after answering, so practice teaches
+  source      String? // "Official SAT Practice Test 4"
+  published   Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  attempts BankAttempt[]
+  saves    BankSaved[]
+
+  @@index([skillId, order])
+  @@index([sessionId])
+}
+
+/// One answer to one question. Kept as events rather than a running total so
+/// accuracy, streaks and the activity trend can all be derived from the same
+/// history, and a student can redo a question without erasing the first go.
+model BankAttempt {
+  id         String         @id @default(cuid())
+  questionId String
+  question   BankQuestion   @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  studentId  String
+  student    StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  given      String
+  isCorrect  Boolean
+  seconds    Int? // time on the question
+  createdAt  DateTime       @default(now())
+
+  @@index([studentId, createdAt])
+  @@index([studentId, questionId])
+  @@index([questionId])
+}
+
+model BankSaved {
+  id         String         @id @default(cuid())
+  questionId String
+  question   BankQuestion   @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  studentId  String
+  student    StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  createdAt  DateTime       @default(now())
+
+  @@unique([studentId, questionId])
+  @@index([studentId])
 }
 
 // ---------- public website content, edited from inside the portal ----------

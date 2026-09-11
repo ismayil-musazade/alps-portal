@@ -13,6 +13,7 @@ const NAV: Record<Role, { href: string; label: string }[]> = {
     { href: "/app/groups", label: "Courses" },
     { href: "/app/attendance", label: "Attendance" },
     { href: "/app/tasks", label: "Tasks" },
+    { href: "/app/bank", label: "Question bank" },
     { href: "/app/exams", label: "Exams" },
     { href: "/app/users", label: "Users" },
   ],
@@ -20,16 +21,19 @@ const NAV: Record<Role, { href: string; label: string }[]> = {
     { href: "/app", label: "Dashboard" },
     { href: "/app/leads", label: "Leads" },
     { href: "/app/students", label: "Students" },
+    { href: "/app/bank", label: "Question bank" },
     { href: "/app/tasks", label: "My tasks" },
   ],
   TEACHER: [
     { href: "/app", label: "Dashboard" },
     { href: "/app/students", label: "Students" },
+    { href: "/app/bank", label: "Question bank" },
     { href: "/app/attendance", label: "Attendance" },
     { href: "/app/tasks", label: "My tasks" },
   ],
   STUDENT: [
     { href: "/app", label: "My Progress" },
+    { href: "/app/bank", label: "Question bank" },
   ],
   PARENT: [
     { href: "/app", label: "My Child" },
@@ -74,12 +78,12 @@ export function AppNav({
           <span className="hidden sm:inline">ALPS</span>
         </Link>
 
-        <nav className="hidden gap-0.5 md:flex">
+        <nav className="hidden min-w-0 gap-0.5 overflow-x-auto md:flex [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {items.map((i) => (
             <Link
               key={i.href}
               href={i.href}
-              className={`whitespace-nowrap rounded-lg px-2.5 py-1.5 text-sm font-medium ${
+              className={`whitespace-nowrap rounded-lg px-2 py-1.5 text-sm font-medium ${
                 pathname === i.href
                   ? "bg-brand-tint text-brand-dark"
                   : "text-ink/70 hover:bg-black/5"
@@ -131,10 +135,10 @@ export function AppNav({
               )}
             </Link>
           )}
-          <span className="hidden whitespace-nowrap text-sm text-ink/60 lg:inline">
+          <span className="hidden whitespace-nowrap text-sm text-ink/60 2xl:inline">
             {name} · <span className="font-semibold">{role.toLowerCase()}</span>
           </span>
-          <Link href="/app/change-password" className="hidden text-xs font-semibold text-ink/50 hover:text-brand xl:inline">
+          <Link href="/app/change-password" className="hidden text-xs font-semibold text-ink/50 hover:text-brand 2xl:inline">
             password
           </Link>
           <button

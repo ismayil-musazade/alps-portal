@@ -11,7 +11,7 @@ import { db as defaultDb } from "@/lib/db";
  */
 const SLUG_TITLE = "English Placement — Reading (demo)";
 
-const QUESTIONS = [
+export const QUESTIONS = [
   {
     section: "Command of Evidence",
     passage: `Neurobiologists Laura Cuaya, Raúl Hernández-Pérez, and colleagues investigated the language detection abilities of eighteen dogs raised in similar settings. The researchers monitored the brain activity of Sander (a golden retriever), Alma (a mixed breed), and other dogs while the animals listened to three recordings: one of The Little Prince being read in Spanish, the second in Hungarian, and a third made up of short, randomly selected fragments of the first two, scrambled so that they didn't resemble human speech. Each dog was familiar with either Spanish or Hungarian, but not both. The team concluded that the amount of previous language exposure a dog has received may influence its ability to distinguish familiar languages from unfamiliar ones.`,
