@@ -65,3 +65,37 @@ export function AddDemoBankQuestions() {
     </span>
   );
 }
+
+/** Installs the 29 SAT skills. Safe to press twice. */
+export function InstallCurriculum() {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  async function install() {
+    setBusy(true);
+    setMsg("");
+    const res = await fetch("/api/bank/install-curriculum", { method: "POST" });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      setMsg(`${data.skills} skills ready.`);
+      router.refresh();
+    } else {
+      setMsg(data.error ?? "Could not install it");
+    }
+    setBusy(false);
+  }
+
+  return (
+    <span className="flex flex-wrap items-center gap-2">
+      <button
+        onClick={install}
+        disabled={busy}
+        className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-40"
+      >
+        {busy ? "Installing…" : "Install the SAT syllabus"}
+      </button>
+      {msg && <span className="text-sm text-ink/60">{msg}</span>}
+    </span>
+  );
+}

@@ -6,7 +6,7 @@ import { can } from "@/lib/permissions";
 import { inputBase } from "@/components/ui";
 import { loadSubjects, bankAnalytics, resolveBankStudent } from "@/lib/question-bank";
 import { SubjectCard, StatTile, ActivityTrend } from "@/components/bank-ui";
-import { AddDemoBankQuestions } from "@/components/demo-paper-button";
+import { AddDemoBankQuestions, InstallCurriculum } from "@/components/demo-paper-button";
 
 export const dynamic = "force-dynamic";
 
@@ -77,6 +77,22 @@ export default async function QuestionBankPage({
             practice working end to end.
           </p>
           <AddDemoBankQuestions />
+        </div>
+      )}
+
+      {subjects.length === 0 && (
+        <div className="mt-5 rounded-2xl border border-brand/30 bg-brand-tint/40 p-5">
+          <p className="font-bold">The syllabus is not installed yet.</p>
+          <p className="mt-0.5 max-w-xl text-sm text-ink/70">
+            This puts in the 29 SAT skills — 19 Math and 10 Reading &amp; Writing — under the
+            College Board&rsquo;s own names and groupings. Sessions and questions go inside them
+            afterwards.
+          </p>
+          {can(user.role, "bank.manage") ? (
+            <div className="mt-3"><InstallCurriculum /></div>
+          ) : (
+            <p className="mt-3 text-sm text-ink/50">Ask a manager or teacher to set it up.</p>
+          )}
         </div>
       )}
 
